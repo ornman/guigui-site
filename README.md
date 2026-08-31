@@ -18,10 +18,20 @@ scripts/            部署辅助脚本
 
 ## 部署
 
-- 主:Cloudflare Pages,输出目录 `site`(连本仓库自动部署)
-- 备:任一服务器静态托管,把 `site/` 目录内容放到 web 根目录即可
+- 主:Cloudflare Pages,项目 `guigui-guat` → **https://guigui-guat.pages.dev**
+  - 静态站 = `site/`;反馈 API = `functions/`(Pages Functions,同域 `/fb`,免 CORS)
+  - 更新方式:仓库根目录 `npx wrangler pages deploy --branch=main`
+- 备:任一服务器静态托管,把 `site/` 目录内容放到 web 根目录即可(`scripts/mirror-deploy.sh`)
 
 ## 反馈渠道
 
-- 官网内反馈面板(Worker + D1,见 `feedback-worker/README.md`)
-- 邮箱:kdy233@qq.com
+- 官网内反馈面板:提交 → 同域 `/fb`(Pages Functions + D1)→ 返回编号
+- 看反馈:`https://guigui-guat.pages.dev/fb/list?key=<ADMIN_KEY>`
+  (密钥在本机 `guigui-site/.admin-key`,已 gitignore)
+- 邮箱:kdy233@qq.com;Issue:https://github.com/ornman/guigui-site/issues
+
+## 备注
+
+- `feedback-worker/` 是独立 Worker 版本(同逻辑),仅作备份:其 workers.dev 域**国内不可达**,
+  官网不走它;如需启用须绑自定义域名。主 API 在 `functions/`。
+
