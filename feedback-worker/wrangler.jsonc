@@ -1,0 +1,11 @@
+{
+  "name": "guigui-feedback",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-08-01",
+  // database_id 在 `wrangler d1 create guigui-feedback` 后填入
+  "d1_databases": [
+    { "binding": "DB", "database_name": "guigui-feedback", "database_id": "TODO_D1_ID" }
+  ],
+  // 部署后改成官网最终域名,例如 https://guigui.pages.dev
+  "vars": { "ALLOWED_ORIGIN": "*" }
+}
