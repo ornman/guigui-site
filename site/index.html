@@ -8,20 +8,22 @@
 <meta property="og:title" content="桂桂 · 桂林航天工业学院校园网自动登录">
 <meta property="og:description" content="每天 7:00 自动登录校园网,配置一次之后全程静默。Windows 桌面小工具,专为桂航而作。">
 <meta property="og:type" content="website">
+<meta property="og:image" content="https://guigui-guat.pages.dev/assets/og.png">
+<meta property="og:url" content="https://guigui-guat.pages.dev/">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
 <meta name="description" content="桂桂 / GuiGui · 桂林航天工业学院校园网自动登录助手。每天 7:00 自动登录,配置一次之后全程静默。">
 <title>桂桂 · GuiGui</title>
 <style>
 /* ============================================================
    桂桂官网 v0.7 — 花哨渐变网格底 × 磨砂玻璃 × 分区背景交互
    · 背景:流动渐变 mesh(紫/品红/蓝),光标视差
-   · 能量曲线:Hero 高光 → 中段收敛 → 信号二高潮 → 收敛 → 按钮焦点
-       Fig.00 Hero  — 高光① 点阵网格,光标排斥 + 点亮
-       Fig.01 用法   — 四帧横向预览:下载/配置/成功/日常 状态快照 + 光标动效
-       Fig.02 触发器 — 无背景 canvas,行 hover 高亮即内容交互
-       Fig.03 信号   — 高光② 电磁波全案 · 光标即波源:波在光标处隆起、
-                        被拉向光标,光标持续发涟漪,点击脉冲爆发
-       Fig.04 问答   — 纯玻璃面板,安静阅读
-       Fig.05 下载   — 能量全部集中在磁吸渐变 CTA 按钮
+   · 信息架构:高频任务前置(问答/下载),进阶原理后置
+       Fig.00 Hero  — 高光① 点阵网格 + 立即下载 CTA
+       Fig.01 用法   — 大舞台 + 步骤切换(四帧 1:1 PRD 尺寸)
+       Fig.02 问答   — FAQ + 排障 + 反馈(高频求助前置)
+       Fig.03 下载   — 磁吸渐变 CTA + 隐私/更新日志
+       Fig.04 原理   — 8 触发器行(进阶阅读)
+       Fig.05 信号   — 高光② 电磁波 · 光标即波源(完整保留)
    · 玻璃:磨砂面板(backdrop blur + 内高光 + 噪点),产品窗口真磨砂
    ============================================================ */
 :root{
@@ -628,6 +630,34 @@ section.sc > canvas.scene{
   .win:hover{transform:none}
 }
 
+/* ═══ 整改补充:锚点定位/一键复制/回到顶部/隐私+日志块 ═══ */
+.faq details{scroll-margin-top:96px}
+.faq details.hash-hit{background:rgba(109,77,232,0.08)}
+.ft-row{scroll-margin-top:96px}
+.hash-copy{
+  font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--accent);
+  border:1px solid rgba(109,77,232,0.4);background:rgba(109,77,232,0.05);
+  border-radius:6px;padding:3px 9px;cursor:pointer;margin-left:6px;
+  transition:background 160ms ease-out;
+}
+.hash-copy:hover{background:rgba(109,77,232,0.14)}
+.hash-copy.done{color:#0E7A4E;border-color:rgba(14,122,78,0.4);background:rgba(14,122,78,0.06)}
+.dl-extra{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;margin-top:26px}
+.dl-extra .cell p{font-family:var(--serif);font-size:13.5px;color:var(--ink-2);line-height:1.7;margin-top:6px}
+.terminal-body{overflow-x:auto}
+.hero{overflow:hidden} /* 窄屏裁掉 win-halo 探出的一截,防整页横向溢出 */
+.to-top{
+  position:fixed;right:22px;bottom:22px;z-index:60;width:40px;height:40px;border-radius:12px;
+  border:1px solid var(--line-2);background:rgba(255,255,255,0.85);backdrop-filter:blur(10px);
+  color:var(--ink-2);cursor:pointer;font-size:15px;font-family:var(--mono);line-height:1;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;visibility:hidden;transform:translateY(8px);
+  transition:opacity .25s ease,transform .25s ease,visibility 0s .25s;
+  box-shadow:0 8px 24px rgba(36,31,51,0.12);
+}
+.to-top.show{opacity:1;visibility:visible;transform:none;transition:opacity .25s ease,transform .25s ease}
+.to-top:hover{color:var(--ink);border-color:var(--ink-2)}
+
 /* ═══ 响应式 ═══ */
 @media (max-width: 1120px){
   .hero{padding-top:56px}
@@ -637,7 +667,8 @@ section.sc > canvas.scene{
 @media (max-width: 880px){
   .wrap{padding:0 22px}
   .nav{top:10px;gap:16px;padding:12px 22px}
-  .nav .links{display:none}
+  .nav .links a:not(.keep){display:none}
+  .nav .ver{display:none}
   .sec-head,.dl-head{grid-template-columns:1fr;gap:18px;margin-bottom:32px}
   .ft-rows,.faq-wrap{padding:24px 20px}
   .fb-panel.open{grid-template-columns:1fr}
@@ -672,11 +703,11 @@ section.sc > canvas.scene{
   <a href="#top" class="brand">桂桂<i>/ GuiGui</i></a>
   <div class="links">
     <a href="#fig-01">01 用法</a>
-    <a href="#fig-02">02 触发器</a>
-    <a href="#fig-03">03 信号</a>
-    <a href="#fig-04">04 问答</a>
-    <a href="#fig-05">05 下载</a>
-    <a href="#feedback" class="fb-link">反馈</a>
+    <a href="#fig-02">02 问答</a>
+    <a href="#fig-03" class="keep">03 下载</a>
+    <a href="#fig-04">04 原理</a>
+    <a href="#fig-05">05 信号</a>
+    <a href="#feedback" class="fb-link keep">反馈</a>
   </div>
   <div class="spacer"></div>
   <span class="ver">v0.1 · 32 MB · Win 10/11</span>
@@ -700,8 +731,8 @@ section.sc > canvas.scene{
       <h1 class="rv">每天 7:00,<br><span class="em">自动登录校园网。</span></h1>
       <p class="lede rv">配置一次,之后<b>全程静默</b>——不用打开桂桂,开电脑就已经在线。学号密码只输一次。</p>
       <div class="cta-row rv">
-        <a class="btn-cta" href="#fig-05" data-magnet>
-          带走桂桂
+        <a class="btn-cta" href="#fig-03" data-magnet>
+          立即下载 · 32 MB
           <span class="arr-c">→</span>
           <span class="shine" aria-hidden="true"></span>
         </a>
@@ -873,58 +904,11 @@ section.sc > canvas.scene{
   </div>
 </section>
 
-<!-- ═══ Fig.02 触发器 · 无背景 canvas(行 hover 高亮即交互,中段收敛) ═══ -->
+<!-- ═══ Fig.02 问答+排障+反馈 · 高频求助前置(玻璃面板) ═══ -->
 <section class="sc" id="fig-02">
   <div class="wrap">
     <div class="sec-head">
-      <div class="fig-label"><b>Fig. 02</b><br>Methods<br>· 8 触发器</div>
-      <div>
-        <h2 class="rv">五种触发时机,<br>三项安静策略。</h2>
-        <p class="lede rv">单一时间点会漏。多层叠加保底,总有一层替你兜住。</p>
-      </div>
-    </div>
-    <div class="panel rv">
-      <div class="ft-rows">
-        <div class="ft-row"><div class="fig-label"><b>01</b> Trigger</div><span class="t">起床心跳</span><span class="d">7:00 前后 30 分钟,每 5 分钟尝试一次,任一次成功即停。</span></div>
-        <div class="ft-row"><div class="fig-label"><b>02</b> Trigger</div><span class="t">开机补登</span><span class="d">开机登录系统后 30 秒内补一次。周末也启用。</span></div>
-        <div class="ft-row"><div class="fig-label"><b>03</b> Trigger</div><span class="t">白天巡逻</span><span class="d">联网中途被踢,30 分钟内自动重连。默认开启。</span></div>
-        <div class="ft-row"><div class="fig-label"><b>04</b> Fallback</div><span class="t">WiFi 兜底</span><span class="d">连上预设的校园 WiFi 即触发登录。SSID 扫描点选,免手填。</span></div>
-        <div class="ft-row"><div class="fig-label"><b>05</b> Trigger</div><span class="t">唤醒补登</span><span class="d">笔记本睡眠唤醒后 30 秒内补登,合盖再开自动接上。</span></div>
-        <div class="ft-row"><div class="fig-label"><b>06</b> Policy</div><span class="t">假期静默</span><span class="d">连续 48 小时不可达,心跳降为每天 1 次且不通知。回校自动恢复。</span></div>
-        <div class="ft-row"><div class="fig-label"><b>07</b> UX</div><span class="t">关窗即静</span><span class="d">关闭窗口无托盘图标,只留一枚胶囊浮标,点一下还原。</span></div>
-        <div class="ft-row"><div class="fig-label"><b>08</b> UX</div><span class="t">系统通知</span><span class="d">成败都走 Win11 通知中心,失败 3 次内自动去重不刷屏。</span></div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══ Fig.03 信号 · 炫酷全案:光标即波源(波随光标隆起,点击脉冲爆发) ═══
-     中段第二高潮:紧跟触发器列表,把「重试机制」可视化 -->
-<section class="sc" id="fig-03">
-  <div class="wrap">
-    <div class="sig rv">
-      <canvas id="em-canvas" aria-hidden="true"></canvas>
-      <div class="inner">
-        <div class="fig-label"><b>Fig. 03</b> — Signal · 电磁场</div>
-        <h2>07:00 前后 30 分钟,<br>每 5 分钟<span class="em">试一次,连上即停</span>。</h2>
-        <p class="lede">认证服务器每天 06:50 开门。桂桂在起床前完成全部尝试,任一次成功即停,失败才会通知你。</p>
-        <div class="hint"><span class="cur" aria-hidden="true">✛</span>光标即波源 · 波随你起伏 · 点击发射脉冲</div>
-        <div class="specs">
-          <div class="cell"><div class="fig-label">Retry</div><b>6 次 / 窗口</b></div>
-          <div class="cell"><div class="fig-label">Interval</div><b>5 min</b></div>
-          <div class="cell"><div class="fig-label">Avg Login</div><b>15 ms</b></div>
-          <div class="cell"><div class="fig-label">Server Opens</div><b>06:50</b></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══ Fig.04 问答 · 纯玻璃面板,安静阅读(能量曲线收敛段) ═══ -->
-<section class="sc" id="fig-04">
-  <div class="wrap">
-    <div class="sec-head">
-      <div class="fig-label"><b>Fig. 04</b><br>FAQ<br>· 7 项</div>
+      <div class="fig-label"><b>Fig. 02</b><br>FAQ<br>· 7 项</div>
       <div>
         <h2 class="rv">下载前的常见问题。</h2>
         <p class="lede rv">七个最常被问到的问题,挑你关心的看。</p>
@@ -932,31 +916,31 @@ section.sc > canvas.scene{
     </div>
     <div class="panel rv">
       <div class="faq-wrap faq">
-        <details>
+        <details id="q1">
           <summary><span class="fig-label"><b>Q1</b> Scope</span>只适用于桂林航天工业学院吗?<span class="plus" aria-hidden="true"></span></summary>
           <div class="answer">是。桂桂只针对桂林航天工业学院的 Dr.COM 认证流程适配,其它学校暂不支持。同 Dr.COM 院校可联系开发者评估。本软件与学校官方无关,是桂航在校学生开发的辅助工具。</div>
         </details>
-        <details>
+        <details id="q2">
           <summary><span class="fig-label"><b>Q2</b> Security</span>密码存哪?安全吗?<span class="plus" aria-hidden="true"></span></summary>
           <div class="answer">密码走 Windows 凭据管理器(Credential Manager),不存明文、不写入配置文件。v1 的 config.json 明文方式已废弃,升级时迁移并清空。</div>
         </details>
-        <details>
+        <details id="q3">
           <summary><span class="fig-label"><b>Q3</b> Timing</span>7:00 太晚或太早?能调吗?<span class="plus" aria-hidden="true"></span></summary>
           <div class="answer">默认 7:00 基于多数桂航学子的起床时间,高级设置里可改成任意时间,带常用时间药丸一键填。认证服务器每天 <code>06:50</code> 开门,设早了会前置灰提醒。</div>
         </details>
-        <details>
+        <details id="q4">
           <summary><span class="fig-label"><b>Q4</b> Platform</span>Mac 能用吗?<span class="plus" aria-hidden="true"></span></summary>
           <div class="answer">暂不支持。桂桂是 Windows 桌面应用,Mac 版未排期。</div>
         </details>
-        <details>
+        <details id="q5">
           <summary><span class="fig-label"><b>Q5</b> UX</span>为什么没有托盘图标?<span class="plus" aria-hidden="true"></span></summary>
           <div class="answer">桂桂只在配置时出现,平时不打扰。关窗后只留一枚胶囊浮标,感知面只有系统通知。</div>
         </details>
-        <details>
+        <details id="q6">
           <summary><span class="fig-label"><b>Q6</b> Fallback</span>WiFi 兜底是什么?<span class="plus" aria-hidden="true"></span></summary>
           <div class="answer">检测到你连上预设的校园 WiFi(如 GUAT-WiFi 等)时自动触发一次登录。SSID 列表扫描点选,免手填。</div>
         </details>
-        <details>
+        <details id="q7">
           <summary><span class="fig-label"><b>Q7</b> Update</span>怎么升级或卸载?<span class="plus" aria-hidden="true"></span></summary>
           <div class="answer">升级:重新下载安装包覆盖,配置与日志保留。卸载:走 Windows 设置的应用卸载,用户目录留一份配置备份,30 天后自动清理。</div>
         </details>
@@ -973,11 +957,11 @@ section.sc > canvas.scene{
     </div>
     <div class="panel rv">
       <div class="ft-rows">
-        <div class="ft-row"><div class="fig-label"><b>T1</b> Trouble</div><span class="t">早上七点没登上网</span><span class="d">九成是连的不是校园网:热点和手机流量里桂桂无法工作。切回 Campus-WiFi,连上就自动补登。</span></div>
-        <div class="ft-row"><div class="fig-label"><b>T2</b> Trouble</div><span class="t">日志提示「登录被拒」</span><span class="d">密码改过了(改初始密码、教务改密都会)。打开桂桂把新密码填一次,之后的每天照旧。</span></div>
-        <div class="ft-row"><div class="fig-label"><b>T3</b> Trouble</div><span class="t">「认证服务器不可达」</span><span class="d">学校认证服务器每天 <code>06:50</code> 才开门,开门前不可达不是故障。开门后桂桂自动补,无需处理。</span></div>
-        <div class="ft-row"><div class="fig-label"><b>T4</b> Trouble</div><span class="t">七点电脑没开机</span><span class="d">开机补登兜底:进系统 30 秒内自动补一次,周末也启用,不会因为睡过头漏掉。</span></div>
-        <div class="ft-row"><div class="fig-label"><b>T5</b> Trouble</div><span class="t">安装或运行被杀毒拦</span><span class="d">桂桂只装在用户目录,不碰系统目录。加一次信任即可;日志里能看到卡在了哪一步。</span></div>
+        <div class="ft-row" id="t1"><div class="fig-label"><b>T1</b> Trouble</div><span class="t">早上七点没登上网</span><span class="d">九成是连的不是校园网:热点和手机流量里桂桂无法工作。切回 Campus-WiFi,连上就自动补登。</span></div>
+        <div class="ft-row" id="t2"><div class="fig-label"><b>T2</b> Trouble</div><span class="t">日志提示「登录被拒」</span><span class="d">密码改过了(改初始密码、教务改密都会)。打开桂桂把新密码填一次,之后的每天照旧。</span></div>
+        <div class="ft-row" id="t3"><div class="fig-label"><b>T3</b> Trouble</div><span class="t">「认证服务器不可达」</span><span class="d">学校认证服务器每天 <code>06:50</code> 才开门,开门前不可达不是故障。开门后桂桂自动补,无需处理。</span></div>
+        <div class="ft-row" id="t4"><div class="fig-label"><b>T4</b> Trouble</div><span class="t">七点电脑没开机</span><span class="d">开机补登兜底:进系统 30 秒内自动补一次,周末也启用,不会因为睡过头漏掉。</span></div>
+        <div class="ft-row" id="t5"><div class="fig-label"><b>T5</b> Trouble</div><span class="t">安装或运行被杀毒拦</span><span class="d">桂桂只装在用户目录,不碰系统目录。加一次信任即可;日志里能看到卡在了哪一步。</span></div>
       </div>
     </div>
 
@@ -1031,15 +1015,15 @@ section.sc > canvas.scene{
   </div>
 </section>
 
-<!-- ═══ Fig.05 下载 · 能量全部集中在磁吸渐变 CTA(无背景 canvas) ═══ -->
-<section class="sc" id="fig-05">
+<!-- ═══ Fig.03 下载 · 能量集中在磁吸渐变 CTA + 隐私/更新日志 ═══ -->
+<section class="sc" id="fig-03">
   <div class="wrap">
     <div class="dl-eyebrow rv">
       <span class="pulse" aria-hidden="true"></span>
       <span class="fig-label"><b>Ready</b> — v0.1 · Windows 10/11</span>
     </div>
     <div class="dl-head">
-      <div class="fig-label"><b>Fig. 05</b><br>Install</div>
+      <div class="fig-label"><b>Fig. 03</b><br>Install</div>
       <div>
         <h2 class="rv">一次配置,<br>之后不用再管。</h2>
         <p class="lede rv">免费、无广告、无账号。32 MB · 单文件 · 无后台进程。</p>
@@ -1071,10 +1055,67 @@ section.sc > canvas.scene{
     </div>
 
     <div class="dl-meta rv">
-      <b>SHA-256</b> · 4f8d2c1a · verified<br>
+      <b>SHA-256</b> · 4f8d2c1a · verified <button class="hash-copy" id="hash-copy" type="button">复制</button><br>
       <b>Requires</b> · Windows 10/11 · Dr.COM · 桂林航天工业学院校园网账号
     </div>
-    <p class="dl-note rv"><b>仅供桂林航天工业学院在校学生使用</b>,需接入校内 Dr.COM 校园网账号。本软件与桂林航天工业学院官方无关,系在校学生作品。</p>
+    <p class="dl-note rv"><b>仅供桂林航天工业学院在校学生学习交流使用</b>,需接入校内 Dr.COM 校园网账号。本软件与桂林航天工业学院官方无关,系在校学生作品;使用本工具产生的一切账号风险(如触发学校风控)由使用者自行承担。</p>
+
+    <div class="dl-extra rv">
+      <div class="cell">
+        <div class="fig-label"><b>Privacy</b> · 隐私</div>
+        <p>日志只保存在你电脑的用户目录。桂桂没有服务器,不上传任何数据;只有你主动点「提交反馈」时,才会发送表单里填的内容。</p>
+      </div>
+      <div class="cell">
+        <div class="fig-label"><b>Changelog</b> · 更新日志</div>
+        <p><b>v0.1</b> — 首发版本:每日 07:00 自动登录、五层触发保底、开机补登、日志本地留存。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ Fig.04 触发器原理 · 无背景 canvas,行 hover 高亮(进阶阅读后置) ═══ -->
+<section class="sc" id="fig-04">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="fig-label"><b>Fig. 04</b><br>Methods<br>· 8 触发器</div>
+      <div>
+        <h2 class="rv">五种触发时机,<br>三项安静策略。</h2>
+        <p class="lede rv">单一时间点会漏。多层叠加保底,总有一层替你兜住。</p>
+      </div>
+    </div>
+    <div class="panel rv">
+      <div class="ft-rows">
+        <div class="ft-row"><div class="fig-label"><b>01</b> Trigger</div><span class="t">起床心跳</span><span class="d">7:00 前后 30 分钟,每 5 分钟尝试一次,任一次成功即停。</span></div>
+        <div class="ft-row"><div class="fig-label"><b>02</b> Trigger</div><span class="t">开机补登</span><span class="d">开机登录系统后 30 秒内补一次。周末也启用。</span></div>
+        <div class="ft-row"><div class="fig-label"><b>03</b> Trigger</div><span class="t">白天巡逻</span><span class="d">联网中途被踢,30 分钟内自动重连。默认开启。</span></div>
+        <div class="ft-row"><div class="fig-label"><b>04</b> Fallback</div><span class="t">WiFi 兜底</span><span class="d">连上预设的校园 WiFi 即触发登录。SSID 扫描点选,免手填。</span></div>
+        <div class="ft-row"><div class="fig-label"><b>05</b> Trigger</div><span class="t">唤醒补登</span><span class="d">笔记本睡眠唤醒后 30 秒内补登,合盖再开自动接上。</span></div>
+        <div class="ft-row"><div class="fig-label"><b>06</b> Policy</div><span class="t">假期静默</span><span class="d">连续 48 小时不可达,心跳降为每天 1 次且不通知。回校自动恢复。</span></div>
+        <div class="ft-row"><div class="fig-label"><b>07</b> UX</div><span class="t">关窗即静</span><span class="d">关闭窗口无托盘图标,只留一枚胶囊浮标,点一下还原。</span></div>
+        <div class="ft-row"><div class="fig-label"><b>08</b> UX</div><span class="t">系统通知</span><span class="d">成败都走 Win11 通知中心,失败 3 次内自动去重不刷屏。</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ Fig.05 信号 · 光标即波源(波随光标隆起,点击脉冲爆发);进阶收尾 ═══ -->
+<section class="sc" id="fig-05">
+  <div class="wrap">
+    <div class="sig rv">
+      <canvas id="em-canvas" aria-hidden="true"></canvas>
+      <div class="inner">
+        <div class="fig-label"><b>Fig. 05</b> — Signal · 电磁场</div>
+        <h2>07:00 前后 30 分钟,<br>每 5 分钟<span class="em">试一次,连上即停</span>。</h2>
+        <p class="lede">桂桂在起床前完成全部尝试,任一次成功即停,失败才会通知你。</p>
+        <div class="hint"><span class="cur" aria-hidden="true">✛</span>光标即波源 · 波随你起伏 · 点击发射脉冲</div>
+        <div class="specs">
+          <div class="cell"><div class="fig-label">Retry</div><b>6 次 / 窗口</b></div>
+          <div class="cell"><div class="fig-label">Interval</div><b>5 min</b></div>
+          <div class="cell"><div class="fig-label">Avg Login</div><b>15 ms</b></div>
+          <div class="cell"><div class="fig-label">Server Opens</div><b>06:50</b></div>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -1085,7 +1126,6 @@ section.sc > canvas.scene{
     <div>
       <div class="brand"><img src="assets/logo.svg" alt="桂林航天工业学院校徽" width="16" height="16">桂桂 / GuiGui</div>
       <div class="lines">
-        <span>桂林市金鸡路 2 号 · 邮编 541004 · 桂 ICP 备 05001199 号</span>
         <span>© 2026 桂林航天工业学院在校学生作品 · 与学校官方无关</span>
       </div>
     </div>
@@ -1598,6 +1638,50 @@ if('IntersectionObserver' in window && !reduce){
 } else {
   rvs.forEach(function(el){ el.classList.add('in'); });
 }
+
+/* ═══ 整改补充:FAQ/排障锚点打开 + SHA-256 复制 + 回到顶部 ═══ */
+(function(){
+  function openFromHash(){
+    var h = location.hash;
+    if(!h) return;
+    try{
+      var el = document.querySelector(h);
+      if(el && el.tagName === "DETAILS"){
+        el.open = true; el.classList.add("hash-hit");
+        setTimeout(function(){ el.classList.remove("hash-hit"); }, 2600);
+      }
+    }catch(e){}
+  }
+  openFromHash();
+  addEventListener("hashchange", openFromHash);
+  var cp = document.getElementById("hash-copy");
+  if(cp){
+    cp.addEventListener("click", function(){
+      var txt = "4f8d2c1a";
+      var done = function(){
+        cp.textContent = "已复制"; cp.classList.add("done");
+        setTimeout(function(){ cp.textContent = "复制"; cp.classList.remove("done"); }, 1600);
+      };
+      var fallback = function(){
+        var t = document.createElement("textarea");
+        t.value = txt; document.body.appendChild(t); t.select();
+        try{ document.execCommand("copy"); done(); }catch(e){}
+        document.body.removeChild(t);
+      };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(txt).then(done, fallback);
+      } else { fallback(); }
+    });
+  }
+  var tt = document.createElement("button");
+  tt.className = "to-top"; tt.type = "button"; tt.setAttribute("aria-label", "回到顶部");
+  tt.innerHTML = "&uarr;";
+  tt.addEventListener("click", function(){ scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" }); });
+  document.body.appendChild(tt);
+  var onScroll = function(){ tt.classList.toggle("show", scrollY > innerHeight * 0.9); };
+  addEventListener("scroll", onScroll, { passive: true });
+  onScroll();
+})();
 
 /* ═══ 平滑滚动 ═══ */
 document.querySelectorAll('a[href^="#"]').forEach(function(a){
