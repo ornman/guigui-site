@@ -1,0 +1,9 @@
+{
+  "name": "guigui-fb-reconcile",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-01",
+  "triggers": {
+    "crons": ["0 * * * *"]   // 每小时整点(UTC);灾情日 4000 条积压 ≈ 8h 追平
+  }
+  // CRON_KEY 走 secret:wrangler secret put CRON_KEY(与 Pages 同值)
+}

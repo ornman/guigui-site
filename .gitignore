@@ -2,3 +2,5 @@
 node_modules/
 .dev.vars
 .admin-key
+.cron-key
+.gh-pat
