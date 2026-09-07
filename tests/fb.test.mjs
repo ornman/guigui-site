@@ -38,6 +38,31 @@ function memStore() {
       return rows.filter((r) => r.issue_id != null && r.issue_id !== -1
         && (r.issue_at || '') > since).length;
     },
+    async pendingIssues(limit) {
+      return rows.filter((r) => r.issue_id == null && r.diag_json)
+        .slice(0, limit).map((r) => ({ ...r }));
+    },
+    async claimIssue(rowId) {
+      const r = rows.find((x) => x.id === rowId);
+      if (r && r.issue_id == null) { r.issue_id = -1; return true; }
+      return false;
+    },
+    async unclaimIssue(rowId) {
+      const r = rows.find((x) => x.id === rowId);
+      if (r && r.issue_id === -1) r.issue_id = null;
+      return true;
+    },
+    async health() {
+      return {
+        pending_issues: rows.filter((r) => r.issue_id == null && r.diag_json).length,
+        last_insert_at: rows.length ? rows.map((r) => r.created_at).sort().pop() : null,
+        gh_fail_streak: Number(ops.get('gh_fail_streak') || 0),
+        gh_broken: !!ops.get('gh_broken_since'),
+      };
+    },
+    async recentRows(limit) {
+      return [...rows].sort((a, b) => b.id - a.id).slice(0, limit);
+    },
     async opGet(k) { return ops.has(k) ? ops.get(k) : null; },
     async opIncr(k) { ops.set(k, String(Number(ops.get(k) || 0) + 1)); return true; },
     async opSet(k, v) { ops.set(k, String(v)); return true; },
@@ -70,10 +95,19 @@ const payload = (over = {}) => ({
 
 function ghFake() {
   const calls = [];
+  const comments = [];
   return {
-    calls,
-    ok: { async create({ title, body, labels }) { calls.push({ title, body, labels }); return { ok: true, number: 700 + calls.length }; } },
-    fail: { async create(p) { calls.push(p); return { ok: false, status: 401 }; } },
+    calls, comments,
+    ok: {
+      async create({ title, body, labels }) { calls.push({ title, body, labels }); return { ok: true, number: 700 + calls.length }; },
+      async findOpenMeta() { return 555; },
+      async comment(n, body) { comments.push({ n, body }); return true; },
+    },
+    fail: {
+      async create(p) { calls.push(p); return { ok: false, status: 401 }; },
+      async findOpenMeta() { return null; },
+      async comment() { return false; },
+    },
   };
 }
 
@@ -299,4 +333,128 @@ test('v2 VALIDATION:400 + fields 表单内提示', async () => {
   assert.equal(body.code, 'VALIDATION');
   assert.ok(body.fields.kind);
   assert.equal(store.rows.length, 0);
+});
+
+/* ── S4:对账端点 + meta-issue 报警 + 管理端健康(AC-F7/F14)── */
+
+import { handleReconcile, handleList } from '../lib/fb-core.js';
+
+const recon = async ({ key, store, gh, env }) => handleReconcile({
+  request: new Request(`https://x/fb/reconcile?key=${key ?? 'k1'}`),
+  env: { CRON_KEY: 'k1', ...(env || {}) }, store, gh,
+});
+
+async function seedPending(store, n) {
+  // 预算闸耗尽时提交留下的存量:D1 有行、issue 缺失
+  for (let i = 0; i < n; i++)
+    store.rows.push({
+      id: 900 + i, created_at: nowIso(), ip: '4.4.4.4',
+      kind: 'problem', client_id: 'seed' + i, sender_uid: '2025090270209',
+      app_ver: '2.1.0', what: '灾情日积压 ' + i, when_desc: '', contact: '',
+      diag_json: JSON.stringify({ env: {}, self: {} }),
+    });
+}
+
+test('reconcile:key 错 → 403', async () => {
+  const r = await recon({ key: 'wrong', store: memStore(), gh: ghFake().ok });
+  assert.equal(r.status, 403);
+});
+
+test('reconcile:补建积压 + 幂等重跑不重复(AC-F14)', async () => {
+  const store = memStore(), gh = ghFake();
+  await seedPending(store, 3);
+  const first = await jsonOf(await recon({ store, gh: gh.ok }));
+  assert.equal(first.status, 200);
+  assert.equal(first.body.code, 'RECONCILED');
+  assert.equal(first.body.created, 3);
+  assert.equal(first.body.pending_issues, 0);
+  assert.equal(gh.calls.length, 3);                        // 一行一 issue,标题含 GG-
+  assert.ok(gh.calls.every((c) => c.title.includes('GG-')));
+  // 重跑:无积压可补,零调用
+  const second = await jsonOf(await recon({ store, gh: gh.ok }));
+  assert.equal(second.body.created, 0);
+  assert.equal(gh.calls.length, 3);
+});
+
+test('reconcile:GitHub 失败 → 行回滚留下一轮,报警也发不出去时走 D1 兜底(AC-F7)', async () => {
+  const store = memStore(), gh = ghFake();
+  await seedPending(store, 2);
+  const first = await jsonOf(await recon({ store, gh: gh.fail }));
+  assert.equal(first.body.failed, 2);
+  assert.equal(first.body.pending_issues, 2);              // unclaim 回滚
+  assert.equal(first.body.alerted, false);                 // GH 挂 → 评论也发不出(§6.5 兜底场景)
+  assert.equal(gh.comments.length, 0);
+  assert.equal(store.ops.get('gh_fail_streak'), '2');      // D1 计数在涨(≥10 置 gh_broken 红字)
+  // PAT 换新后一次调用追平(AC-F7 后半)
+  const third = await jsonOf(await recon({ store, gh: gh.ok }));
+  assert.equal(third.body.created, 2);
+  assert.equal(third.body.pending_issues, 0);
+});
+
+test('reconcile:预算限速积压 → meta-issue 评论报警 + 1h 节流(AC-F14)', async () => {
+  const store = memStore(), gh = ghFake();
+  for (let i = 0; i < 500; i++)
+    store.rows.push({ id: 9500 + i, client_id: 'b' + i, ip: '5.5.5.5',
+      created_at: nowIso(), issue_id: 1, issue_at: nowIso(), diag_json: '{}' });
+  await seedPending(store, 3);
+  const first = await jsonOf(await recon({ store, gh: gh.ok }));
+  assert.equal(first.body.code, 'BUDGET_EXHAUSTED');
+  assert.equal(first.body.pending_issues, 3);
+  assert.equal(first.body.alerted, true);                  // GH 健康 → 已有 OPEN meta(555)评论追加
+  assert.equal(gh.comments.length, 1);
+  assert.ok(gh.comments[0].body.includes('预算'));
+  assert.equal(gh.calls.length, 0);                       // 预算耗尽:零 GitHub 建单调用
+  const second = await jsonOf(await recon({ store, gh: gh.ok }));
+  assert.equal(second.body.alerted, false);               // 1/h 节流,不刷屏
+  assert.equal(gh.comments.length, 1);
+});
+
+test('reconcile:预算耗尽且无积压 → 不报警', async () => {
+  const store = memStore(), gh = ghFake();
+  for (let i = 0; i < 500; i++)
+    store.rows.push({ id: 9500 + i, client_id: 'b' + i, ip: '5.5.5.5',
+      created_at: nowIso(), issue_id: 1, issue_at: nowIso(), diag_json: '{}' });
+  const r = await jsonOf(await recon({ store, gh: gh.ok }));
+  assert.equal(r.body.alerted, false);
+  assert.equal(gh.comments.length, 0);
+});
+
+test('reconcile:预算耗尽本轮不动,不发起 GitHub 调用', async () => {
+  const store = memStore(), gh = ghFake();
+  for (let i = 0; i < 500; i++)
+    store.rows.push({ id: 9500 + i, client_id: 'b' + i, ip: '5.5.5.5',
+      created_at: nowIso(), issue_id: 1, issue_at: nowIso(), diag_json: '{}' });
+  await seedPending(store, 1);
+  const r = await jsonOf(await recon({ store, gh: gh.ok }));
+  assert.equal(r.body.code, 'BUDGET_EXHAUSTED');
+  assert.equal(r.body.pending_issues, 1);
+  assert.equal(gh.calls.length, 0);
+});
+
+test('并发对账:claim 抢占,同一行只补建一次', async () => {
+  const store = memStore();
+  await seedPending(store, 1);
+  assert.equal(await store.claimIssue(store.rows[0].id), true);
+  assert.equal(await store.claimIssue(store.rows[0].id), false);   // 第二个并发者抢不到
+  await store.unclaimIssue(store.rows[0].id);
+  assert.equal(await store.claimIssue(store.rows[0].id), true);    // 回滚后可再抢
+});
+
+test('list:key 错 → 403;对则带健康区', async () => {
+  const store = memStore(), gh = ghFake();
+  const bad = await handleList({
+    request: new Request('https://x/fb/list?key=wrong'),
+    env: { ADMIN_KEY: 'a1' }, store });
+  assert.equal(bad.status, 403);
+
+  await seedPending(store, 2);                              // 2 条待补
+  store.ops.set('gh_broken_since', nowIso());               // PAT 失效红字
+  const r = await jsonOf(await handleList({
+    request: new Request('https://x/fb/list?key=a1'),
+    env: { ADMIN_KEY: 'a1' }, store }));
+  assert.equal(r.status, 200);
+  assert.equal(r.body.items.length, 2);
+  assert.equal(r.body.health.pending_issues, 2);
+  assert.equal(r.body.health.gh_broken, true);
+  assert.ok(r.body.health.last_insert_at);
 });
