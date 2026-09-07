@@ -2,6 +2,10 @@
   "name": "guigui-guat",
   "pages_build_output_dir": "site",
   "compatibility_date": "2026-08-01",
+  "vars": {
+    "GH_REPO": "ornman/guigui-site",
+    "ISSUE_BUDGET_PER_HOUR": "500"
+  },
   "d1_databases": [
     { "binding": "DB", "database_name": "guigui-feedback", "database_id": "976cb746-1d0e-4dd1-b7f7-6893436a34ac" }
   ]
