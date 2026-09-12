@@ -111,8 +111,17 @@ function ghFake() {
   };
 }
 
-const post = async ({ body, headers, store, gh, env }) =>
-  handlePost({ request: req(body, headers), env: env || {}, store, gh: gh || ghFake().ok });
+function boardFake() {
+  const calls = [];
+  return {
+    calls,
+    ok: { async post(arg) { calls.push(arg); return { id: 'bp-1' }; } },
+    fail: { async post(arg) { calls.push(arg); throw new Error('board down'); } },
+  };
+}
+
+const post = async ({ body, headers, store, gh, env, board }) =>
+  handlePost({ request: req(body, headers), env: env || {}, store, gh: gh || ghFake().ok, board });
 
 const jsonOf = async (r) => ({ status: r.status, body: await r.json() });
 
@@ -191,7 +200,43 @@ test('v2 主链路:SUBMITTED + 入库 + 单条 issue(AC-F1)', async () => {
   assert.equal(row.issue_id, 701);                        // 回写
   assert.equal(gh.calls.length, 1);
   assert.ok(gh.calls[0].title.includes('GG-'));
-  assert.deepEqual(gh.calls[0].labels, ['problem']);
+  assert.deepEqual(gh.calls[0].labels, ['problem']);      // 标签服务端固定
+});
+
+/* ── 匿名上板(路由 b,2026-09-13)────────────────────── */
+
+test('上板:issue 首建成功 → 一句话同步公开板(kind/what/凭据齐)', async () => {
+  const store = memStore(), gh = ghFake(), board = boardFake();
+  const { body } = await jsonOf(await post({ body: payload(), store, gh: gh.ok, board: board.ok }));
+  assert.equal(body.code, 'SUBMITTED');
+  assert.equal(board.calls.length, 1);
+  assert.deepEqual(board.calls[0].kind, ['problem']);
+  assert.equal(board.calls[0].what, payload().what);
+  assert.equal(board.calls[0].ticket, body.id);
+});
+
+test('上板:板挂了不挡主链路(回执照常,issue 照建)', async () => {
+  const store = memStore(), gh = ghFake(), board = boardFake();
+  const { status, body } = await jsonOf(await post({ body: payload(), store, gh: gh.ok, board: board.fail }));
+  assert.equal(status, 200);
+  assert.equal(body.code, 'SUBMITTED');
+  assert.equal(gh.calls.length, 1);
+  assert.equal(board.calls.length, 1);                    // 调了但抛错被吞
+});
+
+test('上板:幂等重发(replay)不上板', async () => {
+  const store = memStore(), gh = ghFake(), board = boardFake();
+  await jsonOf(await post({ body: payload(), store, gh: gh.ok, board: board.ok }));
+  const second = await jsonOf(await post({ body: payload({ what: '重发' }), store, gh: gh.ok, board: board.ok }));
+  assert.equal(second.body.replay, true);
+  assert.equal(board.calls.length, 1);                    // 只有首建那一次
+});
+
+test('上板:issue 失败(SUBMITTED_DEGRADED)不上板', async () => {
+  const store = memStore(), gh = ghFake(), board = boardFake();
+  const { body } = await jsonOf(await post({ body: payload(), store, gh: gh.fail, board: board.ok }));
+  assert.equal(body.code, 'SUBMITTED_DEGRADED');
+  assert.equal(board.calls.length, 0);                    // 没建成 issue,不上板
 });
 
 test('幂等:同 client_id 重发返回原 GG-xx,不开第二条 issue(AC-F4)', async () => {
