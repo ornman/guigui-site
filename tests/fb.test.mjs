@@ -153,6 +153,35 @@ test('validate:诊断区超长悄悄截断(机器生成不拒人)', () => {
   assert.equal(norm.diag.crashes[0].trace.length, 8192);
 });
 
+test('validate:runlog 区归一 — 行数切片/单行截断/形状防御(2026-09-16 全量口径)', () => {
+  const mk = (n, len) => Array.from({ length: n }, (_, i) => `L${i}` + 'A'.repeat(len));
+  const { norm } = validate(payload({
+    runlog: { bytes: 99000, total_lines: 4500, omitted_lines: 2, lines: mk(4500, 600) },
+  }));
+  const rl = norm.diag.runlog;
+  assert.equal(rl.lines.length, 4000);                       // LIMITS.runlog_lines
+  assert.ok(rl.lines.every((l) => l.length <= 500));        // LIMITS.runlog_line
+  assert.equal(rl.omitted_lines, 2);
+  const { norm: norm2 } = validate(payload({ runlog: 'not-an-object' }));
+  assert.deepEqual(norm2.diag.runlog, { bytes: 0, total_lines: 0, omitted_lines: 0, lines: [] });
+});
+
+test('render_issue:runlog 区折叠展示,超预算截尾并注明两层截头', () => {
+  const lines = Array.from({ length: 100 },
+    (_, i) => `2026-09-16 08:0${i % 10}:00 [INFO] ensure: 第${i}拍` + 'X'.repeat(300));
+  const { body } = render_issue({
+    id: 'GG-40', kind: ['problem'], what: '今早没登', app_ver: '2.1.0',
+    contact: '', when: '', sender_uid: '', created_at: nowIso(),
+    diag: { env: {}, self: {}, runlog: { bytes: 9, total_lines: 100, omitted_lines: 7, lines } },
+  });
+  assert.ok(body.includes('运行日志 runlog'));
+  assert.ok(body.includes('客户端截头 7 行'));
+  assert.ok(body.includes('issue 内再截头'));               // 100 行×300 字 > 12K 预算
+  assert.ok(!body.includes('第0拍'));                       // 截掉的是头部
+  assert.ok(body.includes('第99拍'));                       // 保尾
+  assert.ok(body.length < 65536);                            // GitHub issue 硬顶内
+});
+
 test('render_issue:注入防护(AC-F16)', () => {
   const rec = {
     id: 'GG-33', kind: ['problem'], app_ver: '2.1.0',
@@ -289,10 +318,10 @@ test('限频:client_id 30/h、桌面 IP 300/h、匿名 IP 8/h,429 带 retry_afte
   assert.equal(r4.status, 429);
 });
 
-test('64KB 大包早拒,不进 JSON 解析(AC-F10 第 4 层)', async () => {
+test('256KB 大包早拒,不进 JSON 解析(AC-F10 第 4 层;2026-09-16 限额随 runlog 区上调)', async () => {
   const store = memStore();
   // content-length 是 fetch 禁设头,构造层用最小假 request 直打编排层
-  const fake = { headers: { get: (h) => (h === 'content-length' ? String(65 * 1024) : null) } };
+  const fake = { headers: { get: (h) => (h === 'content-length' ? String(257 * 1024) : null) } };
   const r = await handlePost({ request: fake, env: {}, store, gh: ghFake().ok });
   const body = await r.json();
   assert.equal(r.status, 413);
