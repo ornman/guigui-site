@@ -13,10 +13,10 @@ site/               官网本体(静态,可直接托管)
   version.json      桌面端最新版号(诊断包 latest_ver 与更新检查共用)
   assets/           校徽(完整横锁 + 圆盘水印)
   vendor/           桂桂 bot 动效(MIT,见文件头)
-functions/          反馈 API(Pages Functions,同域 /fb,免 CORS)
-lib/                /fb v2 核心逻辑(纯函数 + adapter,函数薄壳)
-tests/              node --test(npm test):校验/渲染/幂等/限频/预算/双槽
-migrations/         D1 迁移(002 起 = /fb v2)
+functions/          官网 API(Pages Functions,同域免 CORS:/fb 反馈 + /download 下载计数)
+lib/                服务端核心(纯函数 + adapter,函数薄壳:fb-core / dl-core)
+tests/              node --test(npm test):校验/渲染/幂等/限频/预算/双槽/下载计数
+migrations/         D1 迁移(002 起 = /fb v2;003 = 下载计数)
 feedback-worker/    旧独立 Worker 版本(仅备份,不再演进)
 scripts/            部署辅助脚本
 ```
@@ -41,6 +41,21 @@ scripts/            部署辅助脚本
 - 仓已转私有(方案 A):issue 正文可含学号明文与完整诊断
 - 看反馈:`https://guigui-guat.pages.dev/fb/list?key=<ADMIN_KEY>`
 - 邮箱:kdy233@qq.com;Issue:https://github.com/ornman/guigui-site/issues
+
+## 下载计数(/download,2026-09-16)
+
+- 官网下载按钮 href=`/download`(Pages Function):读 `site/version.json` 推导
+  `guigui-setup-<latest>.exe` → D1 `download_events` 落一条事件(`ctx.waitUntil`
+  不挡跳转)→ 302 直链。**发版只需 bump version.json + 把 exe 放进 `site/`**
+  (文件名必须等于 `guigui-setup-<latest>.exe`,由桌面仓 `guigui/setup.iss`
+  OutputBaseFilename 决定),按钮与函数都不用动。
+- 口径:一次 GET /download = 一次下载(点击);断点续传/分片直打静态 exe 不计。
+- **公开计数** `GET /download/count`:只回真人数 `{ok,count}`,5 分钟边缘缓存;
+  下载区灰字「已下载 · N 次」拉的就是它(失败静默藏行)。
+- **管理端** `GET /download/list?key=ADMIN_KEY`(与 /fb/list 同钥同款 403):
+  浏览器打开 = 深色小页(累计/近7天/按版本/按日),脚本拉 = JSON;
+  真人/含爬虫两套数,bot 判据只在 `lib/dl-core.js` `isBot` 一处。
+- 迁移:`migrations/003-dl-count.sql`(表 `download_events`)。
 
 ## 备注
 

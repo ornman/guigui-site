@@ -177,6 +177,8 @@ h2{font-family:var(--serif);font-size:clamp(32px,3.8vw,54px);font-weight:300;let
   text-decoration:none;letter-spacing:.05em;transition:color 150ms ease-out;
 }
 .nav .links a:hover{color:var(--accent)}
+.nav .links a.gh{display:inline-flex;align-items:center;gap:6px}
+.nav .links a.gh svg{width:13px;height:13px}
 .nav .spacer{flex:1}
 .nav .ver{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);letter-spacing:.08em}
 
@@ -215,12 +217,6 @@ section.sc > canvas.scene{
 .hero h1 .em{font-weight:500;color:var(--ink)}
 .hero .lede{margin-top:24px;position:relative;z-index:1}
 .hero .cta-row{display:flex;align-items:center;gap:34px;margin-top:38px;flex-wrap:wrap;position:relative;z-index:1}
-.hero .hero-meta{
-  display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:28px;
-  padding:20px 26px;margin-top:48px;border-radius:18px;position:relative;z-index:1;
-}
-.hero .hero-meta .cell .fig-label{margin-bottom:8px}
-.hero .hero-meta .cell p{font-family:var(--serif);font-size:13.5px;color:var(--ink-2);line-height:1.6}
 
 /* ═══ 产品窗口(真磨砂玻璃) ═══ */
 .win-stage{position:relative;width:468px;flex-shrink:0;z-index:1}
@@ -681,7 +677,6 @@ section.sc > canvas.scene{
   .faq summary{grid-template-columns:70px 1fr 16px;gap:14px;font-size:16.5px}
   .faq .answer{padding-left:84px}
   .terminal,.dl-cta-row,.dl-meta,.dl-note{margin-left:0}
-  .hero .hero-meta{grid-template-columns:1fr;gap:18px;margin-top:40px;padding:22px 24px}
   section.sc{padding:72px 0}
   .sig .inner{padding:40px 30px}
   .sig{min-height:480px}
@@ -712,6 +707,7 @@ section.sc > canvas.scene{
     <a href="#fig-04">04 问答</a>
     <a href="#fig-05" class="keep">05 下载</a>
     <a href="#feedback" class="fb-link keep">反馈</a>
+    <a href="https://github.com/ornman/guigui" class="gh" target="_blank" rel="noopener" aria-label="GitHub 仓库 · 点个 Star"><svg class="gh-ic" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>Star</a>
   </div>
   <div class="spacer"></div>
   <span class="ver">v0.1 · 32 MB · Win 10/11</span>
@@ -775,12 +771,6 @@ section.sc > canvas.scene{
       </div>
     </div>
    </div>
-    <div class="hero-meta panel rv">
-      <div class="cell"><div class="fig-label"><b>Silent</b></div><p>配置好之后一切后台静默执行——不开界面、不弹窗,无感连上校园网。</p></div>
-      <div class="cell"><div class="fig-label"><b>Purpose</b></div><p>替桂航学子把「每天连网」这件事记好,起床即在线。</p></div>
-      <div class="cell"><div class="fig-label"><b>Method</b></div><p>五层触发器叠加:心跳、开机、巡逻、WiFi 兜底、唤醒。</p></div>
-      <div class="cell"><div class="fig-label"><b>Scope</b></div><p>仅供桂林航天工业学院在校学生,Dr.COM 校园网。</p></div>
-    </div>
   </div>
 </section>
 
@@ -1101,7 +1091,7 @@ section.sc > canvas.scene{
     </div>
 
     <div class="dl-cta-row rv">
-      <a class="btn-cta xl" href="guigui-setup-2.1.0.exe" download data-magnet>
+      <a class="btn-cta xl" href="/download" data-magnet>
         <svg class="win-ic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="3" y="3" width="8.3" height="8.3" rx="1"/><rect x="12.7" y="3" width="8.3" height="8.3" rx="1"/><rect x="3" y="12.7" width="8.3" height="8.3" rx="1"/><rect x="12.7" y="12.7" width="8.3" height="8.3" rx="1"/></svg>
         带走桂桂 · Windows 10/11
         <span class="arr-c">↓</span>
@@ -1110,6 +1100,7 @@ section.sc > canvas.scene{
     </div>
 
     <div class="dl-meta rv">
+      <span id="dl-count-line" hidden><b>已下载</b> · <span id="dl-count"></span> 次<br></span>
       <b>SHA-256</b> · 5f314332 · verified <button class="hash-copy" id="hash-copy" type="button">复制</button><br>
       <b>Requires</b> · Windows 10/11 · Dr.COM · 桂林航天工业学院校园网账号
     </div>
@@ -1140,7 +1131,7 @@ section.sc > canvas.scene{
       </div>
     </div>
     <div class="spacer"></div>
-    <div class="repo"><a href="https://github.com/ornman/guigui-site" target="_blank" rel="noopener">查看源码</a></div>
+    <div class="repo"><a href="https://github.com/ornman/guigui" target="_blank" rel="noopener">查看源码</a></div>
   </div>
 </footer>
 
@@ -1664,6 +1655,11 @@ if('IntersectionObserver' in window && !reduce){
   }
   openFromHash();
   addEventListener("hashchange", openFromHash);
+  fetch("/download/count").then(function(r){ return r.ok ? r.json() : null; }).then(function(d){
+    if(!d || typeof d.count !== "number") return;
+    var n = document.getElementById("dl-count"), line = document.getElementById("dl-count-line");
+    if(n && line){ n.textContent = d.count.toLocaleString("zh-CN"); line.hidden = false; }
+  }).catch(function(){});
   var cp = document.getElementById("hash-copy");
   if(cp){
     cp.addEventListener("click", function(){
