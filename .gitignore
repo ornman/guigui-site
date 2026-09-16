@@ -4,3 +4,4 @@ node_modules/
 .admin-key
 .cron-key
 .gh-pat
+site/*.exe
