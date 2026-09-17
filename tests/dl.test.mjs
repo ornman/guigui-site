@@ -54,13 +54,29 @@ test('isBot:脚本/爬虫 UA 判真,浏览器/桌面端/空判假', () => {
   assert.equal(isBot(null), false);
 });
 
-test('resolveAsset:version.json → {ver,path};5xx/坏 JSON/ASSETS 缺席 → null', async () => {
+test('resolveAsset:version.json → {ver,path,sha256...};5xx/坏 JSON/ASSETS 缺席 → null', async () => {
   assert.deepEqual(await resolveAsset({ request: req(), env: { ASSETS: vj('2.1.0') } }),
-    { ver: '2.1.0', path: '/guigui-setup-2.1.0.exe', size_hint: null, dl_base: null });
+    { ver: '2.1.0', path: '/guigui-setup-2.1.0.exe', size_hint: null, sha256: null, dl_base: null });
   assert.equal(await resolveAsset({ request: req(), env: { ASSETS: assets('{}', 500) } }), null);
   assert.equal(await resolveAsset({ request: req(), env: { ASSETS: assets('not json') } }), null);
   assert.equal(await resolveAsset({ request: req(), env: { ASSETS: vj('garbage') } }), null);
   assert.equal(await resolveAsset({ request: req(), env: {} }), null);
+});
+
+test('resolveAsset:sha256 归一——64hex 小写保留;非 64hex/含非 hex 字符/带空格/缺字段 → null', async () => {
+  const sha = '5f314332bc9075ad056fc181477dcf4886ee41987cf68a0d4e0161c53797dcc7';
+  const ok = assets(JSON.stringify({ latest: '2.1.0', sha256: sha }));
+  assert.equal((await resolveAsset({ request: req(), env: { ASSETS: ok } })).sha256, sha);
+  const upper = assets(JSON.stringify({ latest: '2.1.0', sha256: sha.toUpperCase() }));
+  assert.equal((await resolveAsset({ request: req(), env: { ASSETS: upper } })).sha256, sha);
+  const trimmed = assets(JSON.stringify({ latest: '2.1.0', sha256: `  ${sha}  ` }));
+  assert.equal((await resolveAsset({ request: req(), env: { ASSETS: trimmed } })).sha256, sha);
+  const short = assets(JSON.stringify({ latest: '2.1.0', sha256: sha.slice(0, 63) }));
+  assert.equal((await resolveAsset({ request: req(), env: { ASSETS: short } })).sha256, null);
+  const dirty = assets(JSON.stringify({ latest: '2.1.0', sha256: sha.replace(/^./, 'g') })); // 非 hex
+  assert.equal((await resolveAsset({ request: req(), env: { ASSETS: dirty } })).sha256, null);
+  const num = assets(JSON.stringify({ latest: '2.1.0', sha256: 123 }));
+  assert.equal((await resolveAsset({ request: req(), env: { ASSETS: num } })).sha256, null);
 });
 
 /* ── GET /download 编排 ──────────────────────── */
@@ -274,7 +290,7 @@ test('count:真人数 + ver + size_mb(HEAD Content-Length,24897729B → 24MB)+ �
   const r = await handleDlCount({ request: req(), env: { ASSETS: a }, fetchImpl: a.fetch, store });
   assert.equal(r.status, 200);
   assert.match(r.headers.get('cache-control'), /max-age=300/);
-  assert.deepEqual(await r.json(), { ok: true, count: 2, ver: '2.1.0', size_mb: 24 });
+  assert.deepEqual(await r.json(), { ok: true, count: 2, ver: '2.1.0', size_mb: 24, sha256: null });
 });
 
 test('count:HEAD 不给 → Range 206 兜底解析 content-range(26214400B → 25MB)', async () => {
@@ -283,6 +299,7 @@ test('count:HEAD 不给 → Range 206 兜底解析 content-range(26214400B → 2
   const body = await r.json();
   assert.equal(body.size_mb, 25);
   assert.equal(body.ver, '2.1.0');
+  assert.equal(body.sha256, null);
 });
 
 test('count:HEAD 无长且 Range 被忽略 → GET 200 头里拿全量长(生产实测形态)', async () => {
@@ -305,14 +322,37 @@ test('count:公网探测全挂 → version.json size_mb 兜底', async () => {
 test('count:version.json 读不到 → ver/size null,count 照发(页面保留静态兜底)', async () => {
   const a = routedAssets({});
   const r = await handleDlCount({ request: req(), env: { ASSETS: a }, fetchImpl: a.fetch, store: memDlStore() });
-  assert.deepEqual(await r.json(), { ok: true, count: 0, ver: null, size_mb: null });
+  assert.deepEqual(await r.json(), { ok: true, count: 0, ver: null, size_mb: null, sha256: null });
 });
 
 test('count:D1 挂 → count=null 但 ver/size 照发(元数据不依赖计数库)', async () => {
   const a = stdAssets(24897729);
   const r = await handleDlCount({ request: req(), env: { ASSETS: a }, fetchImpl: a.fetch, store: downDlStore() });
   assert.equal(r.status, 200);
-  assert.deepEqual(await r.json(), { ok: true, count: null, ver: '2.1.0', size_mb: 24 });
+  assert.deepEqual(await r.json(), { ok: true, count: null, ver: '2.1.0', size_mb: 24, sha256: null });
+});
+
+test('count:sha256 通路——version.json 合法 sha 透传到响应(JSON 端点单一正本)', async () => {
+  const sha = '5f314332bc9075ad056fc181477dcf4886ee41987cf68a0d4e0161c53797dcc7';
+  const a = routedAssets({
+    '/version.json': () => new Response(JSON.stringify({ latest: '2.1.0', sha256: sha }), { status: 200 }),
+    '/guigui-setup-2.1.0.exe': () => new Response(null, { status: 200, headers: { 'content-length': '24897729' } }),
+  });
+  const r = await handleDlCount({ request: req(), env: { ASSETS: a }, fetchImpl: a.fetch, store: memDlStore() });
+  const body = await r.json();
+  assert.equal(body.sha256, sha);
+  assert.equal(body.ver, '2.1.0');
+  assert.equal(body.size_mb, 24);
+});
+
+test('count:version.json 里 sha256 写成非 64hex → sha=null,其它字段照发(页面保留静态兜底)', async () => {
+  const a = routedAssets({
+    '/version.json': () => new Response(JSON.stringify({ latest: '2.1.0', sha256: 'not a real hash' }), { status: 200 }),
+  });
+  const r = await handleDlCount({ request: req(), env: { ASSETS: a }, fetchImpl: a.fetch, store: memDlStore() });
+  const body = await r.json();
+  assert.equal(body.sha256, null);
+  assert.equal(body.ver, '2.1.0');
 });
 
 test('count:双源——主源健康,大小探主源(26214400B → 25MB),不碰同域', async () => {
