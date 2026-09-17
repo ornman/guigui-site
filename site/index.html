@@ -572,7 +572,7 @@ section.sc > canvas.scene{
 .dl-head{display:grid;grid-template-columns:150px 1fr;gap:56px;margin-bottom:44px;align-items:start}
 .dl-head .fig-label{padding-top:10px;line-height:1.8}
 .terminal{
-  max-width:600px;margin-left:206px;position:relative;border-radius:12px;overflow:hidden;
+  max-width:640px;margin-left:206px;position:relative;border-radius:12px;overflow:hidden;
   background:rgba(23,20,31,0.94);border:1px solid rgba(255,255,255,0.12);
   box-shadow:0 20px 52px rgba(36,31,51,0.28);
   backdrop-filter:blur(10px);
@@ -591,8 +591,7 @@ section.sc > canvas.scene{
 .terminal-body .ok{color:#B79BFF}
 .terminal-body .cursor{display:inline-block;width:6px;height:13px;background:#B79BFF;vertical-align:middle;animation:blink 1.1s steps(2) infinite;margin-left:2px}
 @keyframes blink{50%{opacity:0}}
-.dl-cta-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:26px;margin:44px 0 0 206px;max-width:906px}
-.dl-cta-row > a{width:100%;justify-content:center}
+.dl-cta-row{display:flex;align-items:stretch;gap:26px;margin:44px 0 0 206px;flex-wrap:wrap;max-width:640px;justify-content:space-between}
 /* GitHub Star 玻璃钮(方案F:与主 CTA 同宽同高并排;磨砂玻璃悬停变墨紫;扫光/外圈光环/箭头外弹保留,无星数) */
 .gh-star{
   position:relative;display:inline-flex;align-items:center;justify-content:center;gap:11px;
@@ -602,12 +601,12 @@ section.sc > canvas.scene{
   -webkit-backdrop-filter:blur(16px) saturate(160%);
   border:1px solid rgba(255,255,255,0.9);
   color:var(--ink);text-decoration:none;
-  font-family:var(--sans);font-size:15px;font-weight:600;letter-spacing:.01em;
+  font-family:var(--sans);font-size:17.5px;font-weight:600;letter-spacing:.01em;
   box-shadow:0 10px 30px rgba(36,31,51,0.10), inset 0 1px 0 rgba(255,255,255,0.95);
   transition:box-shadow 250ms ease-out, background 250ms ease-out, color 250ms ease-out, border-color 250ms ease-out;
 }
-.gh-star .mark{width:18px;height:18px;flex-shrink:0}
-.gh-star .jt{width:15px;height:15px;flex-shrink:0;margin-left:2px;transition:transform 250ms cubic-bezier(0.32,0.72,0,1)}
+.gh-star .mark{width:20px;height:20px;flex-shrink:0}
+.gh-star .jt{width:16px;height:16px;flex-shrink:0;margin-left:3px;transition:transform 250ms cubic-bezier(0.32,0.72,0,1)}
 .gh-star:hover{
   background:oklch(23% 0.015 295);color:oklch(97% 0.005 295);border-color:transparent;
   box-shadow:0 0 0 2px var(--bg), 0 0 0 4px oklch(23% 0.015 295), 0 14px 34px rgba(36,31,51,0.30);
@@ -623,6 +622,9 @@ section.sc > canvas.scene{
 .dl-meta{font-family:var(--mono);font-size:11px;color:var(--ink-3);line-height:1.8;margin:20px 0 0 206px;letter-spacing:.04em}
 .dl-meta b{color:var(--ink-2);font-weight:400}
 .dl-meta .hash-full{word-break:break-all;color:var(--ink-2)}
+.dl-meta .hash-full.error{opacity:.55;font-style:italic;color:var(--ink-3)}
+.dl-meta .hash-err{display:none;margin:0 0 0 8px;color:#a05a3a;font-family:var(--mono);font-size:10px;font-style:italic;letter-spacing:.04em;vertical-align:1px}
+.dl-meta.is-stale .hash-err{display:inline}
 .dl-note{margin:40px 0 0 206px;padding-top:22px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-3);line-height:1.75;max-width:70ch}
 .dl-note b{color:var(--ink-2);font-weight:500}
 
@@ -705,7 +707,6 @@ section.sc > canvas.scene{
   .faq summary{grid-template-columns:70px 1fr 16px;gap:14px;font-size:16.5px}
   .faq .answer{padding-left:84px}
   .terminal,.dl-cta-row,.dl-meta,.dl-note{margin-left:0}
-  .dl-cta-row{grid-template-columns:1fr;max-width:480px}
   section.sc{padding:72px 0}
   .sig .inner{padding:40px 30px}
   .sig{min-height:480px}
@@ -1135,7 +1136,7 @@ section.sc > canvas.scene{
 
     <div class="dl-meta rv">
       <span id="dl-count-line" hidden><b>已下载</b> · <span id="dl-count"></span> 次<br></span>
-      <b>SHA-256</b> · <span class="hash-full" data-dl-hash>5f314332bc9075ad056fc181477dcf4886ee41987cf68a0d4e0161c53797dcc7</span> · verified <button class="hash-copy" id="hash-copy" type="button">复制</button><br>
+      <b>SHA-256</b> · <span class="hash-full" data-sha>5f314332bc9075ad056fc181477dcf4886ee41987cf68a0d4e0161c53797dcc7</span><span class="hash-err" aria-live="polite"></span> · verified <button class="hash-copy" id="hash-copy" type="button">复制</button><br>
       <b>Requires</b> · Windows 10/11 · Dr.COM · 桂林航天工业学院校园网账号
     </div>
     <p class="dl-note rv"><b>下载即代表你同意</b>:仅供桂林航天工业学院在校学生学习交流使用,需接入校内 Dr.COM 校园网账号;本软件与学校官方无关,系在校学生作品,使用本工具产生的一切账号风险(如触发学校风控)由使用者自行承担。</p>
@@ -1663,10 +1664,30 @@ if('IntersectionObserver' in window && !reduce){
       }
     }catch(e){}
   }
+  /* SHA-256 状态:live 拿到 = 写入 data-sha + 清 .is-stale;拿不到 = 静态兜底 + .is-stale 提示
+   * 单一正本 = site/version.json(/download/count 经 dl-core.resolveAsset 读 version.json),
+   * HTML 内 hardcoded 是 fallback,失败/缺失时可见(打 .error 灰化 + 「版本信息暂时不可用」)。 */
+  function markHashFresh(sha){
+    document.querySelectorAll("[data-sha]").forEach(function(el){
+      el.textContent = sha;
+      el.classList.remove("error");
+    });
+    var meta = document.querySelector(".dl-meta");
+    if(meta) meta.classList.remove("is-stale");
+    var msg = document.querySelector(".hash-err");
+    if(msg) msg.textContent = "";
+  }
+  function markHashStale(){
+    document.querySelectorAll("[data-sha]").forEach(function(el){ el.classList.add("error"); });
+    var meta = document.querySelector(".dl-meta");
+    if(meta) meta.classList.add("is-stale");
+    var msg = document.querySelector(".hash-err");
+    if(msg && !msg.textContent) msg.textContent = "版本信息暂时不可用";
+  }
   openFromHash();
   addEventListener("hashchange", openFromHash);
   fetch("/download/count").then(function(r){ return r.ok ? r.json() : null; }).then(function(d){
-    if(!d || !d.ok) return;
+    if(!d || !d.ok){ markHashStale(); return; }
     if(typeof d.count === "number"){
       var n = document.getElementById("dl-count"), line = document.getElementById("dl-count-line");
       if(n && line){ n.textContent = d.count.toLocaleString("zh-CN"); line.hidden = false; }
@@ -1678,13 +1699,15 @@ if('IntersectionObserver' in window && !reduce){
       document.querySelectorAll("[data-dl-size]").forEach(function(el){ el.textContent = d.size_mb + " MB"; });
     }
     if(d.sha256){
-      document.querySelectorAll("[data-dl-hash]").forEach(function(el){ el.textContent = d.sha256; });
+      markHashFresh(d.sha256);
+    } else {
+      markHashStale();
     }
-  }).catch(function(){});
+  }).catch(function(){ markHashStale(); });
   var cp = document.getElementById("hash-copy");
   if(cp){
     cp.addEventListener("click", function(){
-      var txt = (document.querySelector("[data-dl-hash]") || {}).textContent || "";
+      var txt = (document.querySelector("[data-sha]") || {}).textContent || "";
       var done = function(){
         cp.textContent = "已复制"; cp.classList.add("done");
         setTimeout(function(){ cp.textContent = "复制"; cp.classList.remove("done"); }, 1600);
