@@ -56,7 +56,7 @@ test('isBot:脚本/爬虫 UA 判真,浏览器/桌面端/空判假', () => {
 
 test('resolveAsset:version.json → {ver,path};5xx/坏 JSON/ASSETS 缺席 → null', async () => {
   assert.deepEqual(await resolveAsset({ request: req(), env: { ASSETS: vj('2.1.0') } }),
-    { ver: '2.1.0', path: '/guigui-setup-2.1.0.exe', size_hint: null });
+    { ver: '2.1.0', path: '/guigui-setup-2.1.0.exe', size_hint: null, dl_base: null });
   assert.equal(await resolveAsset({ request: req(), env: { ASSETS: assets('{}', 500) } }), null);
   assert.equal(await resolveAsset({ request: req(), env: { ASSETS: assets('not json') } }), null);
   assert.equal(await resolveAsset({ request: req(), env: { ASSETS: vj('garbage') } }), null);
@@ -102,6 +102,65 @@ test('D1 挂:计数失败绝不挡下载(302 照发)', async () => {
   const r = await handleDownload({ request: req(), env: { ASSETS: vj('2.1.0') }, store: downDlStore() });
   assert.equal(r.status, 302);
   assert.equal(r.headers.get('location'), '/guigui-setup-2.1.0.exe');
+});
+
+/* ── 双源:dl_base 主源(深圳直连)+ Cloudflare 兜底 ──
+ * 探活缓存是模块级状态,各用例用不同 host 隔离,避免 60s TTL 串味。 */
+
+const vjDl = (host, extra = {}) =>
+  assets(JSON.stringify({ latest: '2.1.0', dl_base: `https://${host}`, released_at: '2026-09-16', notes: '', ...extra }));
+const dlFetch = (dlStatus) => {                                // 只应答 dl host 的 HEAD;其余外呼皆炸
+  const heads = [];
+  return {
+    heads,
+    async fetch(input) {
+      const url = typeof input === 'string' ? input : input.url;
+      if (url.startsWith('https://dl-')) { heads.push(url); return new Response(null, { status: dlStatus }); }
+      throw new Error('unexpected fetch: ' + url);
+    },
+  };
+};
+
+test('resolveAsset:dl_base 透传;https 强制/尾斜杠剪/明文 http 弃', async () => {
+  const base = await resolveAsset({ request: req(), env: { ASSETS: vj('2.1.0') } });
+  assert.equal(base.dl_base, null);                            // 无字段 → 单源(Cloudflare)
+  const norm = await resolveAsset({ request: req(), env: { ASSETS: vjDl('dl-ok.test', {}) } });
+  assert.equal(norm.dl_base, 'https://dl-ok.test');
+  const slash = await resolveAsset({ request: req(), env: { ASSETS: assets(JSON.stringify({ latest: '2.1.0', dl_base: 'https://dl-ok.test/' })) } });
+  assert.equal(slash.dl_base, 'https://dl-ok.test');           // 尾斜杠归一
+  const plain = await resolveAsset({ request: req(), env: { ASSETS: assets(JSON.stringify({ latest: '2.1.0', dl_base: 'http://103.236.55.179' })) } });
+  assert.equal(plain.dl_base, null);                           // 明文 http → 弃(浏览器会标不安全下载)
+});
+
+test('双源:主源健康 → 302 主源绝对 URL,计数照落', async () => {
+  const store = memDlStore(), f = dlFetch(200);
+  const r = await handleDownload({ request: req(), env: { ASSETS: vjDl('dl-a.test') }, store, fetchImpl: f.fetch });
+  assert.equal(r.status, 302);
+  assert.equal(r.headers.get('location'), 'https://dl-a.test/guigui-setup-2.1.0.exe');
+  assert.equal(f.heads.length, 1);
+  assert.equal(store.rows.length, 1);
+});
+
+test('双源:主源 404(exe 没传到)→ 302 回 Cloudflare 同域', async () => {
+  const f = dlFetch(404);
+  const r = await handleDownload({ request: req(), env: { ASSETS: vjDl('dl-b.test') }, store: memDlStore(), fetchImpl: f.fetch });
+  assert.equal(r.headers.get('location'), '/guigui-setup-2.1.0.exe');
+});
+
+test('双源:主源网络挂(fetch reject)→ 302 回 Cloudflare 同域', async () => {
+  const f = { fetch: async () => { throw new Error('network down'); } };
+  const r = await handleDownload({ request: req(), env: { ASSETS: vjDl('dl-c.test') }, store: memDlStore(), fetchImpl: f.fetch });
+  assert.equal(r.headers.get('location'), '/guigui-setup-2.1.0.exe');
+});
+
+test('双源:探活 60s TTL——两击只探一次,窗口内用缓存值', async () => {
+  const f = dlFetch(200);
+  const env = { ASSETS: vjDl('dl-d.test') };
+  const r1 = await handleDownload({ request: req(), env, store: memDlStore(), fetchImpl: f.fetch });
+  const r2 = await handleDownload({ request: req(), env, store: memDlStore(), fetchImpl: f.fetch });
+  assert.equal(r1.headers.get('location'), 'https://dl-d.test/guigui-setup-2.1.0.exe');
+  assert.equal(r2.headers.get('location'), r1.headers.get('location'));
+  assert.equal(f.heads.length, 1);                             // 第二击吃缓存,没再探
 });
 
 /* ── aggregate(统计纯函数,mem/D1 同一条路)──── */
@@ -254,4 +313,42 @@ test('count:D1 挂 → count=null 但 ver/size 照发(元数据不依赖计数�
   const r = await handleDlCount({ request: req(), env: { ASSETS: a }, fetchImpl: a.fetch, store: downDlStore() });
   assert.equal(r.status, 200);
   assert.deepEqual(await r.json(), { ok: true, count: null, ver: '2.1.0', size_mb: 24 });
+});
+
+test('count:双源——主源健康,大小探主源(26214400B → 25MB),不碰同域', async () => {
+  const a = vjDl('dl-e.test');                                 // ASSETS 只喂 version.json
+  const f = async (input) => {                                 // 主源给长;同域被碰即炸(证明优先级)
+    const url = typeof input === 'string' ? input : input.url;
+    if (url.startsWith('https://dl-e.test/'))
+      return new Response(null, { status: 200, headers: { 'content-length': '26214400' } });
+    throw new Error('should not touch cf origin: ' + url);
+  };
+  const r = await handleDlCount({ request: req(), env: { ASSETS: a }, fetchImpl: f, store: memDlStore() });
+  assert.equal((await r.json()).size_mb, 25);
+});
+
+test('count:双源——主源挂,回退同域 Cloudflare 源照常给长', async () => {
+  const a = stdAssets(24897729);                               // 同域:HEAD 200 带 24897729
+  const f = async (input) => {
+    const url = typeof input === 'string' ? input : input.url;
+    if (url.startsWith('https://dl-f.test/')) return new Response(null, { status: 502 });
+    return a.fetch(input);
+  };
+  const env = { ASSETS: vjDl('dl-f.test') };
+  const r = await handleDlCount({ request: req(), env, fetchImpl: f, store: memDlStore() });
+  assert.equal((await r.json()).size_mb, 24);
+});
+
+test('count:双源——主源回 CF 错误页(生产实测 530+17B)不当资产大小,穿透到同域', async () => {
+  const a = stdAssets(24897729);
+  const f = async (input) => {                                 // 复刻生产:dl 子域在 CF 边缘=530+17 字节错误文本
+    const url = typeof input === 'string' ? input : input.url;
+    if (url.startsWith('https://dl-g.test/'))
+      return new Response('error code: 1016\n', { status: 530, headers: { 'content-length': '17' } });
+    return a.fetch(input);
+  };
+  const env = { ASSETS: vjDl('dl-g.test') };
+  const r = await handleDlCount({ request: req(), env, fetchImpl: f, store: memDlStore() });
+  const body = await r.json();
+  assert.equal(body.size_mb, 24);                              // 17B 曾被当大小 → size_mb=0,修复后穿透到同域
 });

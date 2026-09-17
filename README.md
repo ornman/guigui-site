@@ -26,6 +26,9 @@ scripts/            部署辅助脚本
 - 主:Cloudflare Pages,项目 `guigui-guat` → **https://guigui-guat.pages.dev**
   - 静态站 = `site/`;反馈 API = `functions/`(Pages Functions,同域 `/fb`,免 CORS)
   - 更新方式:仓库根目录 `npx wrangler pages deploy --branch=main`
+- 下载主源:`https://dl.yaoxiumax.top`(103.236.55.179,深圳电信直连;Cloudflare
+  DNS 灰云子域,Let's Encrypt 证书)——只服务 exe,官网页面不走它;探活失败
+  自动整链回 Cloudflare 同域资产(见 /download 双源),单点不死。
 - 备:任一服务器静态托管,把 `site/` 目录内容放到 web 根目录即可(`scripts/mirror-deploy.sh`)
 
 ## 反馈系统(/fb v2,2026-09-07)
@@ -46,15 +49,21 @@ scripts/            部署辅助脚本
 
 - 官网下载按钮 href=`/download`(Pages Function):读 `site/version.json` 推导
   `guigui-setup-<latest>.exe` → D1 `download_events` 落一条事件(`ctx.waitUntil`
-  不挡跳转)→ 302 直链。**发版只需 bump version.json + 把 exe 放进 `site/`**
-  (文件名必须等于 `guigui-setup-<latest>.exe`,由桌面仓 `guigui/setup.iss`
-  OutputBaseFilename 决定),按钮与函数都不用动。
-- 口径:一次 GET /download = 一次下载(点击);断点续传/分片直打静态 exe 不计。
+  不挡跳转)→ 302 直链。**双源(2026-09-17)**:version.json 带 `dl_base`
+  (主源 `https://dl.yaoxiumax.top`)时,302 前探活(HEAD 主源 exe,60s TTL,
+  2xx 才算活)→ 健康 302 主源绝对 URL;探活失败/超时/无 `dl_base` → 302 同域
+  Cloudflare 路径兜底(CF 免费版国内直连实测 81KB/s,慢但不死)。回滚单源 =
+  删 `version.json` 的 `dl_base` 字段,代码永不再动。**发版 = bump version.json
+  + exe 放进 `site/` + exe 传服务器**(`scripts/mirror-deploy.sh`;文件名必须等于
+  `guigui-setup-<latest>.exe`,由桌面仓 `guigui/setup.iss` OutputBaseFilename
+  决定),按钮与函数都不用动。
+- 口径:一次 GET /download = 一次下载(点击);断点续传/分片直打静态 exe 不计(两源同)。
 - **公开计数** `GET /download/count`:`{ok,count,ver,size_mb}`——count=真人数;
-  ver/size_mb 探自**实际部署资产**(公网 GET 头,生产实测 Range 被忽略但
-  Content-Length 给全量长;version.json `size_mb` 字段为兜底),5 分钟边缘缓存;
-  下载区灰字「已下载 · N 次」与全站大小/版本号(`data-dl-size`/`data-dl-ver` 占位)
-  拉的都是它(失败静默保留静态兜底文本)。**发版时页面大小/版本号自动跟新**。
+  ver/size_mb 探自**实际部署资产**(双源:主源优先,挂了回退同域;HEAD/Range,
+  生产实测 Range 被忽略但 Content-Length 给全量长;version.json `size_mb` 兜底),
+  5 分钟边缘缓存;下载区灰字「已下载 · N 次」与全站大小/版本号
+  (`data-dl-size`/`data-dl-ver` 占位)拉的都是它(失败静默保留静态兜底文本)。
+  **发版时页面大小/版本号自动跟新**。
 - **管理端** `GET /download/list?key=ADMIN_KEY`(与 /fb/list 同钥同款 403):
   浏览器打开 = 深色小页(累计/近7天/按版本/按日),脚本拉 = JSON;
   真人/含爬虫两套数,bot 判据只在 `lib/dl-core.js` `isBot` 一处。
