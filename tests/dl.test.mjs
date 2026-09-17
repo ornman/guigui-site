@@ -176,9 +176,28 @@ test('list:D1 挂 → 200 + storage=down + 零值(不 5xx)', async () => {
   assert.equal(body.human_total, 0);
 });
 
-/* ── GET /download/count(公开端点)───────────── */
+/* ── GET /download/count(公开端点:计数 + ver/size 元数据)── */
 
-test('count:只回真人数 + 5 分钟缓存头', async () => {
+const routedAssets = (routes) => ({
+  fetch: (input, init) => {                                  // 标准 fetch 签名:input 可为 string 或 Request
+    const url = typeof input === 'string' ? input : input.url;
+    const method = typeof input === 'string' ? ((init && init.method) || 'GET') : input.method;
+    const mk = routes[new URL(url).pathname] || (() => new Response(null, { status: 404 }));
+    return mk({ method });
+  },
+});
+const stdAssets = (len) => routedAssets({
+  '/version.json': () => new Response(JSON.stringify({ latest: '2.1.0' }), { status: 200 }),
+  '/guigui-setup-2.1.0.exe': () => new Response(null, { status: 200, headers: len != null ? { 'content-length': String(len) } : {} }),
+});
+const rangeAssets = (total) => routedAssets({
+  '/version.json': () => new Response(JSON.stringify({ latest: '2.1.0' }), { status: 200 }),
+  '/guigui-setup-2.1.0.exe': (init) => (init.method === 'HEAD'
+    ? new Response(null, { status: 405 })
+    : new Response(null, { status: 206, headers: { 'content-range': `bytes 0-0/${total}` } })),
+});
+
+test('count:真人数 + ver + size_mb(HEAD Content-Length,24897729B → 24MB)+ 缓存头', async () => {
   const now = Date.now();
   const day = (off) => new Date(now - off * 86400e3).toISOString().slice(0, 10) + ' 08:00:00';
   const store = memDlStore([
@@ -186,14 +205,26 @@ test('count:只回真人数 + 5 分钟缓存头', async () => {
     { created_at: day(0), ver: '2.1.0', ua: 'Mozilla/5.0' },
     { created_at: day(0), ver: '2.1.0', ua: 'wget/1.21' },
   ]);
-  const r = await handleDlCount({ store });
+  const r = await handleDlCount({ request: req(), env: { ASSETS: stdAssets(24897729) }, store });
   assert.equal(r.status, 200);
   assert.match(r.headers.get('cache-control'), /max-age=300/);
-  assert.deepEqual(await r.json(), { ok: true, count: 2 });
+  assert.deepEqual(await r.json(), { ok: true, count: 2, ver: '2.1.0', size_mb: 24 });
 });
 
-test('count:D1 挂 → 503 不缓存(页面端静默藏行)', async () => {
-  const r = await handleDlCount({ store: downDlStore() });
-  assert.equal(r.status, 503);
-  assert.equal(r.headers.get('cache-control'), 'no-store');
+test('count:HEAD 不给 → Range 206 兜底解析 content-range(26214400B → 25MB)', async () => {
+  const r = await handleDlCount({ request: req(), env: { ASSETS: rangeAssets(26214400) }, store: memDlStore() });
+  const body = await r.json();
+  assert.equal(body.size_mb, 25);
+  assert.equal(body.ver, '2.1.0');
+});
+
+test('count:version.json 读不到 → ver/size null,count 照发(页面保留静态兜底)', async () => {
+  const r = await handleDlCount({ request: req(), env: { ASSETS: routedAssets({}) }, store: memDlStore() });
+  assert.deepEqual(await r.json(), { ok: true, count: 0, ver: null, size_mb: null });
+});
+
+test('count:D1 挂 → count=null 但 ver/size 照发(元数据不依赖计数库)', async () => {
+  const r = await handleDlCount({ request: req(), env: { ASSETS: stdAssets(24897729) }, store: downDlStore() });
+  assert.equal(r.status, 200);
+  assert.deepEqual(await r.json(), { ok: true, count: null, ver: '2.1.0', size_mb: 24 });
 });

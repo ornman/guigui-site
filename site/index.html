@@ -709,7 +709,7 @@ section.sc > canvas.scene{
     <a href="https://github.com/ornman/guigui" class="gh" target="_blank" rel="noopener" aria-label="GitHub 仓库 · 点个 Star"><svg class="gh-ic" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>Star</a>
   </div>
   <div class="spacer"></div>
-  <span class="ver">v2.1 · 24 MB · Win 10/11</span>
+  <span class="ver"><span data-dl-ver>v2.1.0</span> · <span data-dl-size>24 MB</span> · Win 10/11</span>
 </nav>
 
 <a id="top"></a>
@@ -732,7 +732,7 @@ section.sc > canvas.scene{
       <div class="cta-row rv">
         <a class="btn-cta" href="#fig-05" data-magnet>
           <svg class="win-ic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="3" y="3" width="8.3" height="8.3" rx="1"/><rect x="12.7" y="3" width="8.3" height="8.3" rx="1"/><rect x="3" y="12.7" width="8.3" height="8.3" rx="1"/><rect x="12.7" y="12.7" width="8.3" height="8.3" rx="1"/></svg>
-          立即下载 · 24 MB
+          立即下载 · <span data-dl-size>24 MB</span>
           <span class="arr-c">→</span>
           <span class="shine" aria-hidden="true"></span>
         </a>
@@ -807,7 +807,7 @@ section.sc > canvas.scene{
               <div class="fw-body">
                 <div class="f1-body">
                   <div class="f1-progress" aria-hidden="true"><i></i></div>
-                  <div class="f1-row"><span>24 MB · 已校验</span><span>100%</span></div>
+                  <div class="f1-row"><span><span data-dl-size>24 MB</span> · 已校验</span><span>100%</span></div>
                   <span class="f1-open">打开</span>
                 </div>
               </div>
@@ -1064,13 +1064,13 @@ section.sc > canvas.scene{
   <div class="wrap">
     <div class="dl-eyebrow rv">
       <span class="pulse" aria-hidden="true"></span>
-      <span class="fig-label"><b>Ready</b> — v2.1 · Windows 10/11</span>
+      <span class="fig-label"><b>Ready</b> — <span data-dl-ver>v2.1.0</span> · Windows 10/11</span>
     </div>
     <div class="dl-head">
       <div class="fig-label"><b>Fig. 05</b><br>Install</div>
       <div>
         <h2 class="rv">一次配置,<br>之后不用再管。</h2>
-        <p class="lede rv">免费、无广告、无账号。24 MB · 单文件 · 无后台进程。</p>
+        <p class="lede rv">免费、无广告、无账号。<span data-dl-size>24 MB</span> · 单文件 · 无后台进程。</p>
       </div>
     </div>
 
@@ -1081,7 +1081,7 @@ section.sc > canvas.scene{
       </div>
       <div class="terminal-body">
         <span class="line cmd">$ guig install</span>
-        <span class="line ok">  ok  downloaded (24 MB)</span>
+        <span class="line ok">  ok  downloaded (<span data-dl-size>24 MB</span>)</span>
         <span class="line ok">  ok  verified signature</span>
         <span class="line ok">  ok  installed to %userprofile%\guigui</span>
         <span class="line ok">  ok  scheduled daily login at 07:00</span>
@@ -1620,9 +1620,17 @@ if('IntersectionObserver' in window && !reduce){
   openFromHash();
   addEventListener("hashchange", openFromHash);
   fetch("/download/count").then(function(r){ return r.ok ? r.json() : null; }).then(function(d){
-    if(!d || typeof d.count !== "number") return;
-    var n = document.getElementById("dl-count"), line = document.getElementById("dl-count-line");
-    if(n && line){ n.textContent = d.count.toLocaleString("zh-CN"); line.hidden = false; }
+    if(!d || !d.ok) return;
+    if(typeof d.count === "number"){
+      var n = document.getElementById("dl-count"), line = document.getElementById("dl-count-line");
+      if(n && line){ n.textContent = d.count.toLocaleString("zh-CN"); line.hidden = false; }
+    }
+    if(d.ver){
+      document.querySelectorAll("[data-dl-ver]").forEach(function(el){ el.textContent = "v" + d.ver; });
+    }
+    if(d.size_mb){
+      document.querySelectorAll("[data-dl-size]").forEach(function(el){ el.textContent = d.size_mb + " MB"; });
+    }
   }).catch(function(){});
   var cp = document.getElementById("hash-copy");
   if(cp){

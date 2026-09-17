@@ -50,8 +50,10 @@ scripts/            部署辅助脚本
   (文件名必须等于 `guigui-setup-<latest>.exe`,由桌面仓 `guigui/setup.iss`
   OutputBaseFilename 决定),按钮与函数都不用动。
 - 口径:一次 GET /download = 一次下载(点击);断点续传/分片直打静态 exe 不计。
-- **公开计数** `GET /download/count`:只回真人数 `{ok,count}`,5 分钟边缘缓存;
-  下载区灰字「已下载 · N 次」拉的就是它(失败静默藏行)。
+- **公开计数** `GET /download/count`:`{ok,count,ver,size_mb}`——count=真人数,
+  ver/size_mb 探自**实际部署资产**(HEAD Content-Length,Range 兜底),5 分钟边缘缓存;
+  下载区灰字「已下载 · N 次」与全站大小/版本号(`data-dl-size`/`data-dl-ver` 占位)
+  拉的都是它(失败静默保留静态兜底文本)。**发版时页面大小/版本号自动跟新**。
 - **管理端** `GET /download/list?key=ADMIN_KEY`(与 /fb/list 同钥同款 403):
   浏览器打开 = 深色小页(累计/近7天/按版本/按日),脚本拉 = JSON;
   真人/含爬虫两套数,bot 判据只在 `lib/dl-core.js` `isBot` 一处。
