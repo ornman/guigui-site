@@ -56,7 +56,7 @@ test('isBot:脚本/爬虫 UA 判真,浏览器/桌面端/空判假', () => {
 
 test('resolveAsset:version.json → {ver,path};5xx/坏 JSON/ASSETS 缺席 → null', async () => {
   assert.deepEqual(await resolveAsset({ request: req(), env: { ASSETS: vj('2.1.0') } }),
-    { ver: '2.1.0', path: '/guigui-setup-2.1.0.exe' });
+    { ver: '2.1.0', path: '/guigui-setup-2.1.0.exe', size_hint: null });
   assert.equal(await resolveAsset({ request: req(), env: { ASSETS: assets('{}', 500) } }), null);
   assert.equal(await resolveAsset({ request: req(), env: { ASSETS: assets('not json') } }), null);
   assert.equal(await resolveAsset({ request: req(), env: { ASSETS: vj('garbage') } }), null);
@@ -196,6 +196,12 @@ const rangeAssets = (total) => routedAssets({
     ? new Response(null, { status: 405 })
     : new Response(null, { status: 206, headers: { 'content-range': `bytes 0-0/${total}` } })),
 });
+const noRangeAssets = (len) => routedAssets({                 // 生产实测形态:HEAD 无长,Range 被忽略(200+全量长)
+  '/version.json': () => new Response(JSON.stringify({ latest: '2.1.0' }), { status: 200 }),
+  '/guigui-setup-2.1.0.exe': (init) => (init.method === 'HEAD'
+    ? new Response(null, { status: 200 })
+    : new Response(null, { status: 200, headers: { 'content-length': String(len) } })),
+});
 
 test('count:真人数 + ver + size_mb(HEAD Content-Length,24897729B → 24MB)+ 缓存头', async () => {
   const now = Date.now();
@@ -205,26 +211,47 @@ test('count:真人数 + ver + size_mb(HEAD Content-Length,24897729B → 24MB)+ �
     { created_at: day(0), ver: '2.1.0', ua: 'Mozilla/5.0' },
     { created_at: day(0), ver: '2.1.0', ua: 'wget/1.21' },
   ]);
-  const r = await handleDlCount({ request: req(), env: { ASSETS: stdAssets(24897729) }, store });
+  const a = stdAssets(24897729);
+  const r = await handleDlCount({ request: req(), env: { ASSETS: a }, fetchImpl: a.fetch, store });
   assert.equal(r.status, 200);
   assert.match(r.headers.get('cache-control'), /max-age=300/);
   assert.deepEqual(await r.json(), { ok: true, count: 2, ver: '2.1.0', size_mb: 24 });
 });
 
 test('count:HEAD 不给 → Range 206 兜底解析 content-range(26214400B → 25MB)', async () => {
-  const r = await handleDlCount({ request: req(), env: { ASSETS: rangeAssets(26214400) }, store: memDlStore() });
+  const a = rangeAssets(26214400);
+  const r = await handleDlCount({ request: req(), env: { ASSETS: a }, fetchImpl: a.fetch, store: memDlStore() });
   const body = await r.json();
   assert.equal(body.size_mb, 25);
   assert.equal(body.ver, '2.1.0');
 });
 
+test('count:HEAD 无长且 Range 被忽略 → GET 200 头里拿全量长(生产实测形态)', async () => {
+  const a = noRangeAssets(24897729);
+  const r = await handleDlCount({ request: req(), env: { ASSETS: a }, fetchImpl: a.fetch, store: memDlStore() });
+  const body = await r.json();
+  assert.equal(body.size_mb, 24);
+});
+
+test('count:公网探测全挂 → version.json size_mb 兜底', async () => {
+  const a = routedAssets({
+    '/version.json': () => new Response(JSON.stringify({ latest: '2.1.0', size_mb: 25 }), { status: 200 }),
+  });                                                        // exe 路由缺省 → 探测 404
+  const r = await handleDlCount({ request: req(), env: { ASSETS: a }, fetchImpl: a.fetch, store: memDlStore() });
+  const body = await r.json();
+  assert.equal(body.ver, '2.1.0');
+  assert.equal(body.size_mb, 25);
+});
+
 test('count:version.json 读不到 → ver/size null,count 照发(页面保留静态兜底)', async () => {
-  const r = await handleDlCount({ request: req(), env: { ASSETS: routedAssets({}) }, store: memDlStore() });
+  const a = routedAssets({});
+  const r = await handleDlCount({ request: req(), env: { ASSETS: a }, fetchImpl: a.fetch, store: memDlStore() });
   assert.deepEqual(await r.json(), { ok: true, count: 0, ver: null, size_mb: null });
 });
 
 test('count:D1 挂 → count=null 但 ver/size 照发(元数据不依赖计数库)', async () => {
-  const r = await handleDlCount({ request: req(), env: { ASSETS: stdAssets(24897729) }, store: downDlStore() });
+  const a = stdAssets(24897729);
+  const r = await handleDlCount({ request: req(), env: { ASSETS: a }, fetchImpl: a.fetch, store: downDlStore() });
   assert.equal(r.status, 200);
   assert.deepEqual(await r.json(), { ok: true, count: null, ver: '2.1.0', size_mb: 24 });
 });
