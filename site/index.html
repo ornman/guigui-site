@@ -16,7 +16,7 @@
 <style>
 /* ============================================================
    桂桂官网 v0.7 — featurebase 白底 × 磨砂玻璃 × 分区背景交互
-   · 背景:细点阵网格(边缘淡出)+ 头部紫柔光(2026-09-16 拍板抄 featurebase 白版)
+   · Hero 背景:紫高光 V 形 + 13 根通高磨砂玻璃叶片(2026-09-17 拍板抄 featurebase 白版,点阵交互退役)
    · 能量曲线:Hero 高光 → 中段收敛 → 信号二高潮 → 收敛 → 按钮焦点
        Fig.00 Hero  — 高光① 点阵网格 + 立即下载 CTA(Win 图标)
        Fig.01 用法   — 大舞台 + 步骤切换(四帧 1:1 PRD 尺寸)
@@ -68,16 +68,8 @@ body{
   min-height:100vh;overflow-x:hidden;position:relative;
 }
 
-/* ═══ 全局背景(featurebase 白:细点阵网格+头部紫柔光,边缘淡出;静态零 JS) ═══ */
-.bg-dots{
-  position:fixed;inset:0;z-index:-2;pointer-events:none;
-  background:
-    radial-gradient(1100px 540px at 50% -160px, rgba(109,77,232,.10), transparent 65%),
-    radial-gradient(circle, rgba(36,31,51,.085) 1px, transparent 1.6px);
-  background-size:auto,30px 30px;
-  -webkit-mask-image:radial-gradient(ellipse 85% 75% at 50% 55%, #000 45%, transparent 82%);
-  mask-image:radial-gradient(ellipse 85% 75% at 50% 55%, #000 45%, transparent 82%);
-}
+/* ═══ 全局背景已静态化(2026-09-17 拍板:抄 featurebase 白版——紫高光+玻璃叶片收进 Hero,
+   点阵/全局柔光层撤除,页面其余为纯白) ═══ */
 
 /* ═══ 排版基元 ═══ */
 .fig-label{
@@ -200,8 +192,29 @@ section.sc > canvas.scene{
   display:grid;grid-template-columns:auto auto;justify-content:center;
   align-items:center;gap:clamp(48px, 6vw, 96px);
 }
-.hero > canvas.scene{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;display:block}
-/* 校徽钢印水印:圆心对齐左文案块(JS 随 resize 重算),校蓝 5%,垫在点阵之下,140s 极慢自转 */
+/* ═══ Hero 背景(featurebase 白:三团紫高光 V 形 + 13 根通高磨砂玻璃叶片;静态零 JS)═══ */
+.hero{overflow:hidden} /* 裁掉探出物,防整页横向溢出 */
+.hero-bg{
+  position:absolute;inset:0;z-index:0;pointer-events:none;
+}
+.hero-bg::before{
+  content:"";position:absolute;inset:0;
+  background:
+    radial-gradient(42% 64% at 12% 62%, rgba(139,92,246,.18), transparent 70%),
+    radial-gradient(42% 64% at 88% 62%, rgba(139,92,246,.18), transparent 70%),
+    radial-gradient(68% 50% at 50% 108%, rgba(109,77,232,.14), transparent 72%);
+}
+.hero-blades{
+  position:absolute;inset:0;z-index:0;pointer-events:none;display:flex;
+}
+.hero-blades i{
+  flex:1 1 0;margin:0 .35%;
+  background:linear-gradient(rgba(255,255,255,.16),rgba(255,255,255,.07));
+  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+  border-left:1px solid rgba(255,255,255,.5);
+  border-right:1px solid rgba(36,31,51,.035);
+}
+/* 校徽钢印水印:圆心对齐左文案块(JS 随 resize 重算),校蓝 5%,垫在叶片之下,140s 极慢自转 */
 .hero > .seal{
   position:absolute;left:0;top:0;
   width:460px;aspect-ratio:1/1;
@@ -619,7 +632,7 @@ section.sc > canvas.scene{
 /* ═══ 减动 ═══ */
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{transition:none !important;animation:none !important}
-  section.sc > canvas.scene,.hero > canvas.scene{display:none}
+  section.sc > canvas.scene{display:none}
   .terminal-body .cursor{display:none}
   .rv{opacity:1;transform:none}
   .btn-cta .shine::after,.btn-cta::before{display:none}
@@ -695,8 +708,6 @@ section.sc > canvas.scene{
 
 <a class="skip-link" href="#main">跳到主要内容</a>
 
-<div class="bg-dots" aria-hidden="true"></div>
-
 <nav class="nav" aria-label="主导航">
   <a href="#top" class="brand">桂桂<i>/ GuiGui</i></a>
   <div class="links">
@@ -716,10 +727,11 @@ section.sc > canvas.scene{
 
 <main id="main">
 
-<!-- ═══ Fig.00 HERO · 背景交互:点阵网格(光标排斥+点亮) ═══ -->
-<section class="hero sc" id="fig-00" data-scene="dots">
+<!-- ═══ Fig.00 HERO · 背景:featurebase 白(紫高光 V 形 + 13 根磨砂玻璃叶片,静态) ═══ -->
+<section class="hero sc" id="fig-00">
   <div class="seal" aria-hidden="true"><img src="assets/logo-mark.svg" alt=""></div>
-  <canvas class="scene" aria-hidden="true"></canvas>
+  <div class="hero-bg" aria-hidden="true"></div>
+  <div class="hero-blades" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
   <div class="wrap">
    <div class="hero-grid">
     <div>
@@ -1185,7 +1197,7 @@ function localMouse(cv){
   return { x: MX - r.left, y: MY - r.top };
 }
 
-/* ═══ 1. 全局背景已静态化(featurebase 白:点阵+柔光 = 纯 CSS,.bg-dots,无 JS) ═══ */
+/* ═══ 1. 全局背景已静态化(featurebase 白:紫高光+玻璃叶片收进 Hero,纯 CSS 无 JS) ═══ */
 
 /* ═══ 2. 场景管理器(进视口才画) ═══ */
 var scenes = [];
@@ -1208,27 +1220,7 @@ function fitScene(sc){
   return fitCanvas(cv);
 }
 
-/* ═══ 2a. Fig.00 点阵网格(排斥+点亮) ═══ */
-function drawDots(sc, t){
-  var ctx = sc.S.ctx, W = sc.S.w, H = sc.S.h, cv = sc.cv;
-  ctx.clearRect(0,0,W,H);
-  var gap = 30, m = inRect(cv) ? localMouse(cv) : {x:-9999,y:-9999};
-  var R = 150;
-  for(var x = gap/2; x < W; x += gap){
-    for(var y = gap/2; y < H; y += gap){
-      var dx = x - m.x, dy = y - m.y;
-      var d2 = dx*dx + dy*dy;
-      var f = Math.max(0, 1 - Math.sqrt(d2)/R);
-      var px = x, py = y;
-      if(f > 0){ var d = Math.sqrt(d2) || 1; px += dx/d * f * 16; py += dy/d * f * 16; }
-      var a = .10 + f*.75, r = 1.1 + f*1.7;
-      ctx.beginPath();
-      ctx.arc(px, py, r, 0, 6.283);
-      ctx.fillStyle = f > .05 ? 'rgba(124,77,255,'+a.toFixed(3)+')' : 'rgba(36,31,51,'+a.toFixed(3)+')';
-      ctx.fill();
-    }
-  }
-}
+/* ═══ 2a. Fig.00 点阵场景已移除(2026-09-17 拍板:Hero 背景改 featurebase 白版玻璃叶片,交互点阵退役) ═══ */
 
 /* ═══ 2b. Fig.02 竖向信号丝 · 静音版 ═══
    能量曲线中段收敛:去掉脉冲光点与品红热区,亮度减半,
@@ -1440,8 +1432,7 @@ if(!reduce){
     for(var i=0;i<scenes.length;i++){
       var sc = scenes[i];
       if(!sc.active || !sc.S) continue;
-      if(sc.kind === 'dots') drawDots(sc, now);
-      else if(sc.kind === 'threads') drawThreads(sc, now);
+      if(sc.kind === 'threads') drawThreads(sc, now);
       else if(sc.kind === 'em') drawEM(sc, now);
     }
     requestAnimationFrame(loop);
