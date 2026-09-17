@@ -192,29 +192,14 @@ section.sc > canvas.scene{
   display:grid;grid-template-columns:auto auto;justify-content:center;
   align-items:center;gap:clamp(48px, 6vw, 96px);
 }
-/* ═══ Hero 背景(featurebase 白:三团紫高光 V 形 + 13 根通高磨砂玻璃叶片;静态零 JS)═══ */
+/* ═══ Hero 背景 = 自产白版整图(scripts/gen-hero-bg.py 生成,featurebase 构图自由复刻:
+   三团紫光 V 形 + 13 根磨砂玻璃缝烤进图里;垫最底层,校徽钢印压其上)═══ */
 .hero{overflow:hidden} /* 裁掉探出物,防整页横向溢出 */
 .hero-bg{
   position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:url("assets/hero-bg.jpg") center/cover no-repeat;
 }
-.hero-bg::before{
-  content:"";position:absolute;inset:0;
-  background:
-    radial-gradient(42% 64% at 12% 62%, rgba(139,92,246,.18), transparent 70%),
-    radial-gradient(42% 64% at 88% 62%, rgba(139,92,246,.18), transparent 70%),
-    radial-gradient(68% 50% at 50% 108%, rgba(109,77,232,.14), transparent 72%);
-}
-.hero-blades{
-  position:absolute;inset:0;z-index:0;pointer-events:none;display:flex;
-}
-.hero-blades i{
-  flex:1 1 0;margin:0 .35%;
-  background:linear-gradient(rgba(255,255,255,.16),rgba(255,255,255,.07));
-  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
-  border-left:1px solid rgba(255,255,255,.5);
-  border-right:1px solid rgba(36,31,51,.035);
-}
-/* 校徽钢印水印:圆心对齐左文案块(JS 随 resize 重算),校蓝 5%,垫在叶片之下,140s 极慢自转 */
+/* 校徽钢印水印:圆心对齐左文案块(JS 随 resize 重算),校蓝 5%,压在背景图之上、内容之下,140s 极慢自转 */
 .hero > .seal{
   position:absolute;left:0;top:0;
   width:460px;aspect-ratio:1/1;
@@ -727,11 +712,10 @@ section.sc > canvas.scene{
 
 <main id="main">
 
-<!-- ═══ Fig.00 HERO · 背景:featurebase 白(紫高光 V 形 + 13 根磨砂玻璃叶片,静态) ═══ -->
+<!-- ═══ Fig.00 HERO · 背景:自产白版整图(紫光 V 形+磨砂玻璃缝,最底层;校徽压其上) ═══ -->
 <section class="hero sc" id="fig-00">
-  <div class="seal" aria-hidden="true"><img src="assets/logo-mark.svg" alt=""></div>
   <div class="hero-bg" aria-hidden="true"></div>
-  <div class="hero-blades" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="seal" aria-hidden="true"><img src="assets/logo-mark.svg" alt=""></div>
   <div class="wrap">
    <div class="hero-grid">
     <div>
