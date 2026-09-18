@@ -26,9 +26,12 @@ scripts/            部署辅助脚本
 - 主:Cloudflare Pages,项目 `guigui-guat` → **https://guigui-guat.pages.dev**
   - 静态站 = `site/`;反馈 API = `functions/`(Pages Functions,同域 `/fb`,免 CORS)
   - 更新方式:仓库根目录 `npx wrangler pages deploy --branch=main`
-- 下载主源:`https://dl.yaoxiumax.top`(103.236.55.179,深圳电信直连;Cloudflare
-  DNS 灰云子域,Let's Encrypt 证书)——只服务 exe,官网页面不走它;探活失败
+- 下载主源:`https://download.coro0.top`(103.236.55.179 深圳电信,复用既有 443
+  下载站:容器 TLS 终结→宿主 nginx 80 按 Host 分发,root=/var/www/dl;限速保险丝
+  4MB/s×单连接/2并发×IP/16 并发×全站)——只服务 exe,官网页面不走它;探活失败
   自动整链回 Cloudflare 同域资产(见 /download 双源),单点不死。
+  ⚠️原计划 dl.yaoxiumax.top 已弃用:主域未备案,80 被电信拦截页拦(HTTP-01
+  签不出证书);该 DNS 记录保留,日后备案了可启用。
 - 备:任一服务器静态托管,把 `site/` 目录内容放到 web 根目录即可(`scripts/mirror-deploy.sh`)
 
 ## 反馈系统(/fb v2,2026-09-07)
@@ -50,7 +53,7 @@ scripts/            部署辅助脚本
 - 官网下载按钮 href=`/download`(Pages Function):读 `site/version.json` 推导
   `guigui-setup-<latest>.exe` → D1 `download_events` 落一条事件(`ctx.waitUntil`
   不挡跳转)→ 302 直链。**双源(2026-09-17)**:version.json 带 `dl_base`
-  (主源 `https://dl.yaoxiumax.top`)时,302 前探活(HEAD 主源 exe,60s TTL,
+  (主源 `https://download.coro0.top`)时,302 前探活(HEAD 主源 exe,60s TTL,
   2xx 才算活)→ 健康 302 主源绝对 URL;探活失败/超时/无 `dl_base` → 302 同域
   Cloudflare 路径兜底(CF 免费版国内直连实测 81KB/s,慢但不死)。回滚单源 =
   删 `version.json` 的 `dl_base` 字段,代码永不再动。**发版 = bump version.json
