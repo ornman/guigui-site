@@ -35,9 +35,13 @@
        └─ 回写 sha256 / size_mb / latest / released_at(notes 手动补,版本号写后)
        └─ 只改这四个字段;min_version 仅事故版催升线临时写,下次发版删除
        └─ 用 Python 写 JSON,不走 bash heredoc(2026-09-16 教训:\\\ 转义被吞)
+[2.5] 官网仓 → site/index.html 两处手动(2026-09-19 2.2.0 首发放了这三漏二被用户抓回):
+       ├─ data-sha span 换新 64 位 SHA(下载区 dl-meta,与 version.json.sha256 同值)
+       └─ Changelog 单元格顶部加一行 <p><b>v<ver></b> · <日期> — <notes 照录 version.json></p>
+          (历史行保留不动;行内不用 data-dl-ver——版本号自动跳而描述不会跟,2.1.0 时代踩过错位)
 [3] 官网仓 → bash scripts/mirror-deploy.sh
-       └─ 把新 exe scp 到 dl.yaoxiumax.top(103.236.55.179 主源,探活 60s TTL 自动切)
-       └─ REMOTE_USER / REMOTE_PATH 留 TODO 占位,SSH 免密配置后填(2026-09-18 现状)
+       └─ 把新 exe scp 到 download.coro0.top(103.236.55.179 主源,探活 60s TTL 自动切)
+       └─ REMOTE_* 已填真值(root + id_ed25519,2026-09-18 配通)
 [4] 官网仓 → npx wrangler pages deploy --branch=main
        └─ CF Pages 自动部署 site/ 子目录 → guigui-guat.pages.dev
        └─ version.json 随主仓部署同步上线,无需单独传
@@ -52,7 +56,7 @@
   "notes": "…",               // 版本元数据(中文一句话,可空)
   "size_mb": 24,              // 下载元数据(download meta)
   "sha256": "5f31…dcc7",      // 下载元数据(必填,desktop compute_release.py 写)
-  "dl_base": "https://dl.yaoxiumax.top",  // 下载元数据(主源域名)
+  "dl_base": "https://download.coro0.top",  // 下载元数据(主源域名)
   "min_version": null         // 下载元数据(可选,事故版催升线写,下次发版删)
 }
 ```
@@ -69,7 +73,7 @@
 桌面端 updater 真机 UAT 在桌面仓做(含火绒拦「拉起安装器」实测);
 官网侧验收:
 
-- `curl -I https://dl.yaoxiumax.top/guigui-setup-<ver>.exe` → 200 + Content-Length
+- `curl -I https://download.coro0.top/guigui-setup-<ver>.exe` → 200 + Content-Length
 - `curl https://guigui-guat.pages.dev/version.json` → sha256 与桌面仓一致
 - `curl https://guigui-guat.pages.dev/download/count` → `sha256` 字段非 null(透传)
 - 浏览器开 `https://guigui-guat.pages.dev` 看下载区 SHA 区显示的是 **live 哈希**
@@ -80,7 +84,7 @@
 | 什么 | 在哪 |
 |---|---|
 | 静态站 | `site/`(CF Pages `guigui-guat` 项目 → https://guigui-guat.pages.dev) |
-| 下载主源 | dl.yaoxiumax.top(103.236.55.179,深圳电信;只服务 exe,官网页面不走它) |
+| 下载主源 | download.coro0.top(103.236.55.179,深圳电信;只服务 exe,官网页面不走它) |
 | 下载兜底 | guigui-guat.pages.dev 同域(Cloudflare 免费版,国内慢但不死) |
 | 计数库 | Cloudflare D1(表 `download_events`,迁移 003) |
 | 反馈库 | Cloudflare D1(同 D1,表见 migrations/002) |
