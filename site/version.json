@@ -1,9 +1,9 @@
 {
-  "latest": "2.2.0",
-  "released_at": "2026-09-19",
-  "notes": "新增检查更新:有新版本时主页横幅提醒,设置页也能手动检查,下载安装都在桂桂里完成;设置页系统板块重排。",
+  "latest": "2.2.1",
+  "released_at": "2026-09-26",
+  "notes": "修了「注销校园网后重登要点两次」的烦人 bug,现在一次就够;安装器图标也升到 256×256 高清版(桌面/任务栏不再糊)。",
   "size_mb": 24,
-  "sha256": "fd4c17ea7af574124c6c4037e15cb0e1d57ba52a642fa605c2600c3b49b4cac6",
+  "sha256": "be97d3334120d7e4adbcec898b27b5e2dc28a111cca6d1a84ccceaf0822ed6e2",
   "dl_base": "https://download.coro0.top",
   "min_version": null
 }
