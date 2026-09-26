@@ -1,28 +1,28 @@
-/* 官网子页面挂载反馈板:指定前缀反代到自部署 feedlog,其余请求原样走官网。
- * - feedlog 的 BETTER_AUTH_URL 须为 https://guigui-guat.pages.dev(同域 cookie);
- * - /fb(官网自身反馈管道)不在此列,永远走官网;
- * - 源站走 cloudflared 快速隧道(Workers fetch 不收裸 IP,1003 教训);
- *   ⚠️ trycloudflare 域名随隧道容器重建而变,变了改这里 ORIGIN 再 deploy。
+/* 官网旧版反馈板反代退役(2026-09-26)。
+ *
+ * 历史:feedlog 早期挂为官网子页面,本页面前缀(/zh /en /_nuxt /api 等)
+ *       反代到 cloudflared 快速隧道(months-neon-though-declaration.trycloudflare.com)。
+ *       2026-09-26 feedlog 已迁至 xiaopozhan,新公网域名 feedback.coro0.top,
+ *       旧 trycloudflare 容器已撤,继续反代=1016 Origin DNS 错误。
+ *
+ * 现状:首页两入口(href=/zh)已改指 feedback.coro0.top/zh 绝对地址,
+ *      不再依赖本中间件转发;保留本中间件仅作老书签 301 跳转。
+ *
+ * Why:旧 /zh /en 等路径只走跳转(不反代),避免 cloudflared 域名轮换
+ *     / 容器重建 / 隧道死掉的活伤;新域名自有 HTTPS 与 cookie 域。
  */
-const ORIGIN = "https://months-neon-though-declaration.trycloudflare.com";
+const NEW_BASE = "https://feedback.coro0.top";
 const PREFIXES = ["/zh", "/en", "/_nuxt", "/api", "/_ipx", "/__nuxt", "/docs"];
-const FILES = ["/favicon.ico", "/logo.svg", "/logo-mark.svg", "/logo-icon.svg", "/og.png"];
 
-function shouldProxy(pathname) {
-  return FILES.includes(pathname) ||
-    PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"));
+function shouldRedirect(pathname) {
+  return PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"));
 }
 
 export async function onRequest(context) {
   const { request, next } = context;
   const url = new URL(request.url);
-  if (!shouldProxy(url.pathname)) return next();
-  const headers = new Headers(request.headers);
-  headers.delete("cf-connecting-ip");
-  return fetch(ORIGIN + url.pathname + url.search, {
-    method: request.method,
-    headers,
-    body: ["GET", "HEAD"].includes(request.method) ? undefined : request.body,
-    redirect: "manual",
-  });
+  if (!shouldRedirect(url.pathname)) return next();
+  // 路径直搬(保留 query);en 旧路径仍跳到 /zh(feedlog 已删 /en,英文归一中文)
+  const target = NEW_BASE + url.pathname.replace(/^\/en(\/|$)/, "/zh$1") + url.search;
+  return Response.redirect(target, 301);
 }
