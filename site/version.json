@@ -1,9 +1,9 @@
 {
-  "latest": "2.2.1",
-  "released_at": "2026-09-26",
-  "notes": "修了「注销校园网后重登要点两次」的烦人 bug,现在一次就够;安装器图标也升到 256×256 高清版(桌面/任务栏不再糊)。",
+  "latest": "2.2.2",
+  "released_at": "2026-09-30",
+  "notes": "修了卸载时容易误点「是」清空所有数据的隐患;现在默认保留,需要清请走设置页「重置桂桂」独立入口。",
   "size_mb": 24,
-  "sha256": "be97d3334120d7e4adbcec898b27b5e2dc28a111cca6d1a84ccceaf0822ed6e2",
-  "dl_base": "https://download.coro0.top",
+  "sha256": "8597eb2700a55be073b18fd5ec0afe05a4b92925953127f197751fff80fd3cd9",
+  "dl_base": "https://guigui-guat.pages.dev",
   "min_version": null
 }
